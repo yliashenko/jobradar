@@ -1,0 +1,126 @@
+{% import "partials/_macros.html" as ui %}
+
+{% macro also_on(links) %}
+{% if links %}
+<p class="alsoon">likely also on {% for s, u in links %}<a class="alsoon-link" href="{{ u }}" target="_blank" rel="noopener" title="likely the same vacancy on {{ s }} (by company and title). The rows are not merged — dedup stitches only an exact match.">{{ s }} ↗</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+{% endif %}
+{% endmacro %}
+
+{% macro job_card(row, threshold, params, query, in_group=false, also_on_links=none) %}
+{%- set band = row|band_class -%}
+{%- set ct = card_tags(row) -%}
+{%- set matched = parse_points(row['matched']) -%}
+{%- set gaps = parse_points(row['gaps']) -%}
+{%- set cov = hiring_cover(row) -%}
+<article class="job vcard b-{{ band }}{% if row['status'] in ('applied', 'skipped') %} done{% endif %}" data-testid="job-card" data-hash="{{ row['hash'] }}">
+  <div class="job-head">
+    <div class="body">
+      <details class="unfold">
+        <summary>
+          <span class="job-title">{{ row['title'] }}<span class="caret">▸</span></span>
+          {% if row['company'] and not in_group %}<span class="job-meta"><a class="co" href="{{ company_link(row['company'], params) }}" title="company page">{{ row['company'] }}</a></span>{% endif %}
+          {% if row['location'] %}<span class="job-where">{{ row['location'] }}</span>{% endif %}
+        </summary>
+      </details>
+      {{ ui.card_facts(row) }}
+      {% if ct.shown %}
+      <div class="job-tags">
+        {% for term in ct.shown %}{{ ui.tagchip(term, params) }}{% endfor %}
+        {% if ct.hidden %}<details class="moretags"><summary class="rest">+{{ ct.hidden|length }}</summary><div class="more-list">{% for t in ct.hidden %}{{ ui.tagchip(t, params) }}{% endfor %}</div></details>{% endif %}
+      </div>
+      {% endif %}
+      {{ also_on(also_on_links) }}
+    </div>
+    <div class="corner">
+      {% if row['score'] is not none %}
+      <a class="score s-{{ band }}" href="#score-{{ row['hash'] }}" data-testid="score-open" aria-haspopup="dialog" title="scoring details"><span class="num">{{ row|score_text }}</span><span class="den">/10</span></a>
+      {% elif not llm_ready %}
+      <a class="score s-{{ band }}" href="#llm-nokey" data-testid="score-nokey" aria-haspopup="dialog" title="scoring needs an API key — click"><span class="num">{{ row|score_text }}</span><span class="den">/10</span></a>
+      {% else %}
+      <div class="score s-{{ band }}"><span class="num">{{ row|score_text }}</span><span class="den">/10</span></div>
+      {% endif %}
+      {{ ui.card_dates(row) }}
+    </div>
+  </div>
+  <div class="rail s-{{ band }}">
+    <div class="rail-line"></div>
+    <div class="rail-threshold" style="left:{{ '%.1f'|format(threshold * 10.0) }}%"></div>
+    {% if row['score'] is not none %}<div class="rail-mark" style="left:{{ '%.1f'|format([0.0, [100.0, row['score'] * 10.0]|min]|max) }}%"></div>{% endif %}
+  </div>
+  {% if row['score'] is not none %}
+  <div class="modal scorepop" id="score-{{ row['hash'] }}" data-testid="score-modal" role="dialog" aria-modal="true" aria-label="scoring details">
+    <div class="modal-box scorepop-box">
+      <a class="modal-close" href="#" aria-label="Close">×</a>
+      <div class="scorepop-top">
+        <div class="scorepop-badge s-{{ band }}"><span class="num">{{ row|score_text }}</span><span class="den">/10</span></div>
+        <div class="scorepop-id">
+          <h3>{{ row['title'] }}</h3>
+          <p class="scorepop-sub">{% if row['band'] in BAND_LABELS %}<b class="s-{{ band }}">{{ BAND_LABELS[row['band']] }}</b>{% endif %}{% if row['company'] %} · {{ row['company'] }}{% endif %}</p>
+        </div>
+      </div>
+      <div class="rail scorepop-rail s-{{ band }}">
+        <div class="rail-line"></div>
+        <div class="rail-threshold" style="left:{{ '%.1f'|format(threshold * 10.0) }}%" title="notify threshold"></div>
+        <div class="rail-mark" style="left:{{ '%.1f'|format([0.0, [100.0, row['score'] * 10.0]|min]|max) }}%"></div>
+      </div>
+      {% if row['verdict'] %}<p class="scorepop-verdict">{{ row['verdict']|mark_skills }}</p>{% endif %}
+      {% if matched %}
+      <div class="scorepop-sect">
+        <h4 class="scorepop-h covers">Covers</h4>
+        <ul class="scorepop-points covers">{% for m in matched %}<li>{{ m|mark_skills }}</li>{% endfor %}</ul>
+      </div>
+      {% endif %}
+      {% if gaps %}
+      <div class="scorepop-sect">
+        <h4 class="scorepop-h gaps">Gaps</h4>
+        <ul class="scorepop-points gaps">{% for g in gaps %}<li>{{ g|mark_skills }}</li>{% endfor %}</ul>
+      </div>
+      {% endif %}
+      <p class="scorepop-foot">rubric {{ row['rubric'] or '—' }}{% if row['scored_at'] %} · scored {{ row['scored_at']|fmt_iso('%d.%m.%Y') }}{% endif %}</p>
+    </div>
+  </div>
+  {% endif %}
+  {% if row['status'] == 'interested' %}
+  <div class="modal" id="cover-{{ row['hash'] }}" data-testid="cover-modal" data-token="{{ params.get('token', '') }}" role="dialog" aria-modal="true" aria-label="cover letter">
+    <div class="modal-box clpop-box">
+      <a class="modal-close" href="#" aria-label="Close">×</a>
+      <h3>Cover letter — {{ row['title'] }}</h3>
+      <p class="clpop-sub">Written from <b>career-facts.md</b> against this posting. Facts only, gaps named. Review before sending.</p>
+      <div class="clpop-actions">
+        <button class="cl-generate" data-hash="{{ row['hash'] }}"{% if cov %} data-regenerate="1"{% endif %} data-testid="cover-generate">{% if cov %}Regenerate{% else %}Generate cover letter{% endif %}</button>
+        <button class="cl-copy" type="button" data-testid="cover-copy">Copy</button>
+        <span class="cl-band cl-{{ cover_band_class(cov.band) }}" data-testid="cover-band">{% if cov.band %}{{ cov.band }}{% if cov.fit_score is not none %} · {{ cov.fit_score }}{% endif %}{% endif %}</span>
+      </div>
+      <div class="cl-status"></div>
+      <div class="cl-result"{% if not cov %} hidden{% endif %}>
+        <pre class="cl-letter" data-testid="cover-letter">{{ cov.letter or '' }}</pre>
+        <details class="cl-fold"><summary>Fit evaluation</summary><div class="cl-eval md">{{ cov.evaluation | md }}</div></details>
+        <details class="cl-fold"><summary>Traceability map</summary><div class="cl-trace md">{{ cov.traceability | md }}</div></details>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if not row['l0_pass'] and row['l0_reason'] %}<p class="l0" title="{{ row['l0_reason'] }}">dropped by the filter: {{ row['l0_reason']|humanize_l0_reason }}</p>{% endif %}
+  <form method="post" action="/status" class="actions" data-testid="status-form">
+    <input type="hidden" name="hash" value="{{ row['hash'] }}">
+    <input type="hidden" name="back" value="{{ query }}">
+    {% for status in STATUS_ORDER %}<button class="{% if row['status'] == status %}on{% endif %}" name="status" value="{{ status }}" data-testid="status-btn" data-status="{{ status }}">{{ STATUS_LABELS[status] }}</button>{% endfor %}
+    {% if row['status'] == 'interested' %}<a class="job-cl" href="{% if llm_ready or cov %}#cover-{{ row['hash'] }}{% else %}#llm-nokey{% endif %}" data-testid="cover-open" title="cover letter">✍ Cover letter{% if cov %} ✓{% endif %}</a>{% endif %}
+    {{ ui.openbox(row) }}
+  </form>
+  <div class="desc">{{ description(row, params) }}</div>
+</article>
+{% endmacro %}
+
+{% macro company_group(company, members, threshold, params, query, also_map) %}
+<details class="cogroup" open>
+  <summary class="cogroup-head" title="Several vacancies from one company grouped together. Click the name — company page; the rest — collapse.">
+    <a class="co" href="{{ company_link(company, params) }}" title="company page">{{ company }}</a>
+    <span class="cocount">{{ members|length }} vacancies</span>
+    <span class="caret">▾</span>
+  </summary>
+  <div class="cogroup-body">
+    {% for r in members %}{{ job_card(r, threshold, params, query, in_group=true, also_on_links=also_map.get(r['hash'])) }}{% endfor %}
+  </div>
+</details>
+{% endmacro %}

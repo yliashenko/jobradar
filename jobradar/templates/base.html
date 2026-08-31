@@ -1,0 +1,30 @@
+{% import "partials/_macros.html" as ui %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% block head_extra %}{% endblock %}
+  <title>jobradar{% if title %} — {{ title }}{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ css_version }}">
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="masthead">
+        {{ ui.menu(active, params) }}
+        <h1><a href="{{ home_href(params) }}">jobradar</a></h1>
+        <div class="topright">
+          {% block runbox %}{% endblock %}
+          {{ ui.account(active, params) }}
+        </div>
+      </div>
+      {% block filters %}{% endblock %}
+    </div>
+  </header>
+  <main class="wrap">{% block content %}{% endblock %}</main>
+  <script>{{ POPUP_JS }}</script>
+  <script>{{ COVER_JS }}</script>
+  <script>{{ HIRING_JS }}</script>
+</body>
+</html>

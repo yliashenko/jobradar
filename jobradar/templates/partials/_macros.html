@@ -1,0 +1,202 @@
+{# Shared chrome: hamburger menu, account icon, tooltip, select. #}
+
+{# Source icon(s) for a vacancy — the board logo linking to the posting; several
+   when a role was cross-posted. Shared by the feed and hiring cards. #}
+{% macro openbox(row) %}
+{%- set links = source_links(row) -%}
+<span class="openbox{% if links|length > 1 %} multi{% endif %}"{% if links|length > 1 %} title="found on several sources"{% endif %}>
+  {% for s in links %}
+  <a class="srcicon" href="{{ s.url }}" target="_blank" rel="noopener" title="open on {{ s.src }}" aria-label="open on {{ s.src }}">{% if s.logo %}<img class="srclogo" src="{{ s.logo }}" alt="{{ s.src }}" width="22" height="22" loading="lazy">{% else %}<span class="srctext">{{ s.src }} ↗</span>{% endif %}</a>
+  {% endfor %}
+</span>
+{%- endmacro %}
+
+{# Salary + Djinni structured fields (English / experience / format / domain) for
+   a vacancy card. Shared by the feed and hiring cards. Location is card-specific
+   (the feed shows it inside its collapsible title), so it is rendered separately. #}
+{% macro card_facts(row) %}
+{%- set chips = extra_chips(row) -%}
+{% if row_get(row, 'salary') %}<div class="keyfacts"><span class="kf kf-pay" title="salary range from the source">{{ row_get(row, 'salary') }}</span></div>{% endif %}
+{% if chips %}<div class="job-extra">{% for c in chips %}<span class="xchip">{{ c }}</span>{% endfor %}</div>{% endif %}
+{% endmacro %}
+
+{# Shared date block for a vacancy card (feed + hiring): publication date (or
+   "seen" when the source gave none) and, once triaged, the status-change date.
+   The parent positions .dates; this macro only holds the markup. #}
+{% macro card_dates(row) %}
+<div class="dates">
+  {% if row_get(row, 'published_at') %}
+  <div class="date" title="published {{ row_get(row, 'published_at')|fmt_iso('%d.%m.%Y %H:%M') }}"><span class="dlabel">pub</span> {{ row_get(row, 'published_at')|fmt_iso('%d.%m.%y') }}</div>
+  {% else %}
+  <div class="date" title="the source gave no publish date; first seen {{ row_get(row, 'first_seen')|fmt_iso('%d.%m.%Y %H:%M') }}"><span class="dlabel">seen</span> {{ row_get(row, 'first_seen')|fmt_iso('%d.%m.%y') }}</div>
+  {% endif %}
+  {% if row_get(row, 'status_at') %}
+  <div class="date upd" title="status «{{ STATUS_LABELS.get(row_get(row, 'status'), row_get(row, 'status')) }}» set {{ row_get(row, 'status_at')|fmt_iso('%d.%m.%Y %H:%M') }}"><span class="dlabel">upd</span> {{ row_get(row, 'status_at')|fmt_iso('%d.%m.%y') }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro llm_gate(token) %}
+<div class="modal" id="llm-nokey" data-testid="llm-nokey-modal" role="dialog" aria-modal="true" aria-label="API key needed">
+  <div class="modal-box nokey-box">
+    <a class="modal-close" href="#" aria-label="Close">×</a>
+    <h3>Add an API key to use this</h3>
+    <p>Vacancy <b>scoring</b> and <b>cover-letter generation</b> run on an LLM — they are the only features that need a key. Collection, L0 filtering, dedup and triage all work without one.</p>
+    <p>Add your key (Anthropic or an OpenAI-compatible provider) in <a href="{{ profile_link(true, token) }}">Profile → LLM access</a> to turn them on.</p>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro menu(active, params) %}
+<details class="menu">
+  <summary aria-label="menu"><span></span><span></span><span></span></summary>
+  <nav>
+    {% for label, path, key in [('Feed', '/', 'feed'), ('Tags', '/tags', 'tags'), ('Stats', '/stats', 'stats'), ('Calendar', '/calendar', 'calendar'), ('Processing', '/runs', 'runs')] %}
+    <a{% if key == active %} class="on"{% endif %} href="{{ page_link(path, params) }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+</details>
+{% endmacro %}
+
+{% macro account(active, params) %}
+<details class="menu account-menu">
+  <summary aria-label="account menu" title="Account">{{ ACCOUNT_ICON }}</summary>
+  <nav>
+    {% for label, path, key in [('Profile', '/profile', 'profile'), ('Hiring Process', '/hiring', 'hiring')] %}
+    <a{% if key == active %} class="on"{% endif %} href="{{ page_link(path, params) }}" data-testid="account-link" data-page="{{ key }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+</details>
+{% endmacro %}
+
+{% macro tooltip(tip) %}<span class="q" data-tip="{{ tip }}" tabindex="0">?</span>{% endmacro %}
+
+{% macro select(name, current, options) %}
+<select name="{{ name }}">
+  {% for value, label in options %}<option value="{{ value }}"{% if current|string == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+</select>
+{% endmacro %}
+
+{% macro pie(p) %}
+{% if not p.slices %}
+<p class="hint">{{ p.empty }}</p>
+{% else %}
+<div class="piewrap">
+  <svg viewBox="0 0 120 120" class="pie" role="img">
+    {% for s in p.slices %}{% if s.kind == 'circle' %}<circle cx="60" cy="60" r="54" fill="{{ s.color }}"></circle>{% else %}<path d="{{ s.d }}" fill="{{ s.color }}"></path>{% endif %}{% endfor %}
+  </svg>
+  <ul class="pielegend">
+    {% for s in p.slices %}<li><span class="sw" style="background:{{ s.color }}"></span>{% if s.href %}<a href="{{ s.href }}">{{ s.label }}</a>{% else %}{{ s.label }}{% endif %}<span class="lc">{{ s.count }}</span></li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro skill_link(term, pct, params, cls='') %}
+<a class="statskill{% if cls %} {{ cls }}{% endif %}" href="{{ tech_href(term, params, '/') }}">{{ term }}<span class="pct">{{ pct }}%</span></a>
+{%- endmacro %}
+
+{% macro srcbar(b) %}
+<div class="srcbar"><span class="k">{{ b.k }}</span><span class="m"><span style="width:{{ b.pct }}%"></span></span><span class="v">{{ b.n }}</span></div>
+{% endmacro %}
+
+{# One tag in three states (neutral → in filter → excluded). Same in menu, card, cloud. #}
+{% macro tagchip(term, params, count=none, font_size=none, show_count=true, path='/') %}
+{%- set state = tech_state(term, params) -%}
+{%- set hint = (count ~ ' vacancies · ' ~ TAG_HINTS[state]) if (count is not none and not show_count) else TAG_HINTS[state] -%}
+<a class="tagchip{% if state %} {{ state }}{% endif %}" href="{{ tech_href(term, params, path) }}" title="{{ hint }}" data-testid="tag" data-tag="{{ term }}"{% if font_size %} style="font-size:{{ '%.2f'|format(font_size) }}rem"{% endif %}>{{ term }}{% if count is not none and show_count %}<span class="n">{{ count }}</span>{% endif %}</a>
+{%- endmacro %}
+
+{% macro hidden_fields(params, keys) %}
+{%- for key in keys %}{% set val = params.get(key, '') %}{% if val %}{% if key == 'co' %}{% for comp in val.split('\n') %}{% if comp.strip() %}<input type="hidden" name="co" value="{{ comp }}">{% endif %}{% endfor %}{% else %}<input type="hidden" name="{{ key }}" value="{{ val }}">{% endif %}{% endif %}{% endfor -%}
+{% endmacro %}
+
+{% macro pickrow(name, row) %}
+<label class="pickrow" data-name="{{ row.value|lower }}"><input type="checkbox" name="{{ name }}" value="{{ row.value }}"{% if row.checked %} checked{% endif %}><span class="lbl">{{ row.value }}</span><span class="n">{{ row.count }}</span></label>
+{%- endmacro %}
+
+{% macro active_tags(params) %}
+{%- set included, excluded = tech_sets(params) -%}
+{% if included or excluded %}
+<span class="activetags">
+  {% for term in included + excluded %}<span class="pair">{{ tagchip(term, params) }}<a class="drop" href="{{ tech_drop_href(term, params) }}" title="remove tag">×</a></span>{% endfor %}
+  <a class="clear" href="/?{{ build_query(params, tech='', notech='') }}">clear all</a>
+</span>
+{% endif %}
+{% endmacro %}
+
+{% macro active_companies(params) %}
+{%- set chosen = co_sets(params) -%}
+{% if chosen %}
+<span class="activetags activeco">
+  {% for comp in chosen %}<span class="pair"><span class="tagchip on co-chip">{{ comp }}</span><a class="drop" href="{{ feed_link(params, co=(chosen | reject('equalto', comp) | join('\n'))) }}" title="remove company">×</a></span>{% endfor %}
+</span>
+{% endif %}
+{% endmacro %}
+
+{% macro runbox(rb) %}
+<form class="runbox" method="post" action="/run">
+  <input type="hidden" name="back" value="{{ rb.back }}">
+  <span class="runlast"{% if rb.hint %} title="{{ rb.hint }}"{% endif %}>{{ rb.line }}</span>
+  <span class="runrow">{% if rb.activity %}<span class="{{ rb.cls }}">{{ rb.activity }}</span>{% endif %}<button{% if rb.busy %} disabled{% endif %}>{{ RADAR_ICON }}{{ rb.label }}</button></span>
+</form>
+{% endmacro %}
+
+{% macro status_tabs(t) %}
+<div class="tabrow">
+  <div class="tabs">
+    {% for tab in t.tabs %}<a class="tab{% if tab.on %} on{% endif %}" href="{{ tab.href }}">{{ tab.label }} <span class="n">{{ tab.count }}</span></a>{% endfor %}
+  </div>
+  {% if t.on_applied %}<a class="hiring-jump" href="/hiring" data-testid="hiring-jump">Hiring Process →</a>{% endif %}
+  {% if t.shown is not none %}<span class="counts"><b>{{ t.total }}</b> in the database · shown <b>{{ t.shown }}</b></span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro pick_tags_popup(pt, params) %}
+<details class="pick" data-pick="tags">
+  <summary title="Search the list, select a few tags and hit Apply — the feed will keep vacancies that have ALL the selected ones. Exclude tags on /tags or via a chip above the feed.">tags{% if pt.included %} · {{ pt.included }}{% endif %} <span class="chev">▾</span></summary>
+  <form class="pick-panel" method="get" action="/">
+    {{ hidden_fields(params, ['status', 'source', 'q', 'min', 'l0', 'token', 'notech', 'co', 'sort', 'days']) }}
+    <input class="picksearch" type="text" placeholder="search a tag" aria-label="search a tag" autocomplete="off">
+    <div class="pick-scroll">
+      {% if pt.sections %}{% for sect in pt.sections %}<section class="pick-sect"><h4>{{ sect.name | group_label }}</h4>{% for row in sect.rows %}{{ pickrow('tech', row) }}{% endfor %}</section>{% endfor %}{% else %}<div class="pick-empty">No tags yet — run a scan.</div>{% endif %}
+    </div>
+    <div class="pick-actions"><button class="apply">Apply</button><a class="clear" href="{{ feed_link(params, tech='') }}">Reset</a></div>
+  </form>
+</details>
+{% endmacro %}
+
+{% macro pick_companies_popup(pc, params) %}
+<details class="pick" data-pick="companies">
+  <summary title="Search the list, select a few companies and hit Apply — the feed will keep only vacancies from the selected companies. The number — how many vacancies at the company.">companies{% if pc.chosen %} · {{ pc.chosen }}{% endif %} <span class="chev">▾</span></summary>
+  <form class="pick-panel" method="get" action="/">
+    {{ hidden_fields(params, ['status', 'source', 'q', 'min', 'l0', 'token', 'tech', 'notech', 'sort', 'days']) }}
+    <input class="picksearch" type="text" placeholder="search a company" aria-label="search a company" autocomplete="off">
+    <div class="pick-scroll">
+      {% if pc.companies %}<section class="pick-sect">{% for row in pc.companies %}{{ pickrow('co', row) }}{% endfor %}</section>{% else %}<div class="pick-empty">No companies yet — run a scan.</div>{% endif %}
+    </div>
+    <div class="pick-actions"><button class="apply">Apply</button><a class="clear" href="{{ feed_link(params, co='') }}">Reset</a></div>
+  </form>
+</details>
+{% endmacro %}
+
+{% macro filters(f, params, pick_tags, pick_companies) %}
+<div class="filterbar">
+  <form class="filters" method="get" action="/">
+    <input type="hidden" name="status" value="{{ params.get('status', 'new') }}">
+    {{ hidden_fields(params, ['tech', 'notech', 'token', 'co']) }}
+    <select name="source">
+      <option value="">all sources</option>
+      {% for src in f.sources %}<option value="{{ src }}"{% if params.get('source', '') == src %} selected{% endif %}>{{ src }}</option>{% endfor %}
+    </select>
+    {{ select('sort', f.sort, f.sort_opts) }}
+    {{ select('days', params.get('days', ''), f.days_opts) }}
+    {{ select('min', params.get('min', ''), f.score_opts) }}
+    <input type="search" name="q" value="{{ params.get('q', '') }}" placeholder="search title, company, location…">
+    <label class="chk"><input type="checkbox" name="l0" value="1"{% if params.get('l0') == '1' %} checked{% endif %}> L0-dropped</label>
+    <button>Apply</button>
+  </form>
+  {{ pick_tags_popup(pick_tags, params) }}
+  {{ pick_companies_popup(pick_companies, params) }}
+</div>
+{% endmacro %}

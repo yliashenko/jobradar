@@ -1,0 +1,70 @@
+# pyproject.toml — jobradar dev-tool config.
+#
+# Only [tool.*] here: this holds the dev layer (ruff/mypy/pytest/coverage).
+# ruff/mypy exclude nothing except .venv and jobradar-e2e (a separate Playwright
+# project).
+
+# --- ruff: formatter + linter -------------------------------------------------
+[tool.ruff]
+line-length = 88
+# Tooling floor — 3.10 (the minimum for a modern mypy; 3.9 is EOL since 10.2025).
+target-version = "py310"
+extend-exclude = [
+    ".venv",
+    "jobradar-e2e",
+]
+
+[tool.ruff.lint]
+# A moderate but meaningful set: pyflakes, imports, pyupgrade, bugs (B),
+# simplifications (SIM), comprehensions (C4), dead-code (PIE), ruff-specific (RUF).
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "PIE", "RUF"]
+ignore = [
+    "E501",    # line length is handled by the formatter; we don't wrap "why" comments
+    "BLE001",  # deliberate fail-safe `except Exception` in collectors (CLAUDE.md §4)
+    "DTZ005",  # datetime.now() without tz — local time on purpose (one node, Kyiv)
+    "DTZ006",  # same for fromtimestamp
+    # Homoglyph rules clash with the Ukrainian identifiers still used in
+    # functional data: nearly every Cyrillic letter has a Latin twin. Off on purpose.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: deferred imports inside tests are a deliberate style; class-level
+# constant dict fixtures (RULES etc.) too (RUF012 is pedantic here).
+"tests/*" = ["E402", "RUF012"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# --- mypy: type checking ------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "."
+files = ["jobradar"]
+# Start lenient: grow typing module by module. Strict flags
+# (disallow_untyped_defs) get turned on for already-typed modules.
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# --- pytest -------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+# --- coverage -----------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["jobradar"]
+omit = ["jobradar/engine.py"]  # compatibility facade — pure re-exports, nothing to measure
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

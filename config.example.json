@@ -1,0 +1,83 @@
+{
+  "notify_min_score": 7,
+  "dedup_ttl_days": 180,
+  "heartbeat_alert_hours": 24,
+  "request_delay_seconds": 2,
+  "telegram": {
+    "bot_token": "",
+    "chat_id": ""
+  },
+  "webui": {
+    "host": "0.0.0.0",
+    "port": 8787,
+    "token": ""
+  },
+  "scorer": {
+    "enabled": true,
+    "api_key": "",
+    "provider": "anthropic",
+    "base_url": "",
+    "model": "claude-haiku-4-5-20251001",
+    "timeout_seconds": 60
+  },
+  "cover_letter": {
+    "model": "claude-sonnet-5",
+    "timeout_seconds": 120
+  },
+  "sources": {
+    "dou": {
+      "enabled": true,
+      "feeds": [
+        "https://jobs.dou.ua/vacancies/feeds/?category=QA&exp=5plus",
+        "https://jobs.dou.ua/vacancies/feeds/?category=QA&remote",
+        "https://jobs.dou.ua/vacancies/feeds/?search=SDET",
+        "https://jobs.dou.ua/vacancies/feeds/?search=Playwright",
+        "https://jobs.dou.ua/vacancies/feeds/?search=pytest",
+        "https://jobs.dou.ua/vacancies/feeds/?category=QA&search=AI",
+        "https://jobs.dou.ua/vacancies/feeds/?category=QA&search=automation",
+        "https://jobs.dou.ua/vacancies/feeds/?search=AQA"
+      ]
+    },
+    "djinni": {
+      "enabled": true,
+      "feeds": [
+        "https://djinni.co/jobs/rss/?primary_keyword=QA",
+        "https://djinni.co/jobs/rss/?primary_keyword=Automation%20QA"
+      ]
+    },
+    "imap": {
+      "enabled": true,
+      "host": "imap.gmail.com",
+      "port": 993,
+      "user": "",
+      "password": "",
+      "folder": "JobRadar",
+      "lookback_days": 3,
+      "mark_seen": true,
+      "fetch_djinni_pages": true
+    }
+  },
+  "l0": {
+    "exclude_title": [
+      "\\b(junior|intern|trainee|стажер|джун)\\b",
+      "\\b(manual\\s+qa|мануальн)\\b",
+      "\\b(game\\s*test|тестувальник\\s+ігор)\\b",
+      "\\b(1c|1с)\\b"
+    ],
+    "exclude_text": [
+      "\\brelocation\\s+is\\s+(required|mandatory)\\b",
+      "\\bonly\\s+(poland|germany|portugal|spain|cyprus|georgia|tbilisi)-based\\b",
+      "\\b(tbilisi|warsaw|krakow|lisbon|limassol)-based\\s+only\\b",
+      "\\bна\\s+постійній\\s+основі\\s+в\\s+офісі\\b"
+    ],
+    "require_any_text": [
+      "\\bQA\\b",
+      "\\bSDET\\b",
+      "\\bautomation\\b",
+      "\\bавтоматизац",
+      "\\btest(ing|er)?\\b",
+      "\\bтестув"
+    ],
+    "min_salary_usd": 3000
+  }
+}

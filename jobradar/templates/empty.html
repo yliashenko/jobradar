@@ -1,0 +1,20 @@
+{% import "partials/_macros.html" as ui %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if busy %}<meta http-equiv="refresh" content="4">{% endif %}
+  <title>jobradar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ css_version }}">
+</head>
+<body>
+  <header><div class="wrap"><div class="masthead">
+    <h1><a href="/">jobradar</a></h1>
+    <div class="topright">{{ ui.runbox(runbox) }}{{ ui.account({}, false) }}</div>
+  </div></div></header>
+  <main class="wrap"><div class="empty"><b>No scan yet</b>
+Hit "Scan!" in the header — the page will refresh itself once there is data.</div></main>
+  <script>{{ POPUP_JS }}</script>
+</body>
+</html>

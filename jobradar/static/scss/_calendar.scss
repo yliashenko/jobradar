@@ -1,0 +1,201 @@
+// Activity calendar: month grid, per-cell metrics, day modal.
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+.cal-title {
+  font-size: 1.15rem;
+  margin: 0;
+  min-width: 10rem;
+  text-align: center;
+  color: var(--ink);
+}
+.cal-arrow {
+  text-decoration: none;
+  font-size: 1.1rem;
+  color: var(--petrol);
+  border: 1px solid var(--line);
+  padding: 0.1rem 0.6rem;
+  line-height: 1.4;
+  background: var(--card);
+}
+.cal-arrow:hover {
+  border-color: var(--petrol);
+  background: var(--paper);
+}
+.cal-pick {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+}
+.cal-pick select,
+.cal-pick input {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 0;
+}
+.cal-pick button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.32rem 0.8rem;
+  cursor: pointer;
+  border-radius: 0;
+  border: 1px solid var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.cal-pick button:hover {
+  background: #0b3937;
+}
+.cal-today {
+  font-size: 0.76rem;
+  color: var(--dim);
+  text-decoration: none;
+  align-self: center;
+}
+.cal-today:hover {
+  color: var(--accent);
+}
+.cal-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.cal-grid th {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600;
+  padding: 0.3rem 0;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.cal-cell {
+  border: 1px solid var(--line);
+  height: 4.6rem;
+  vertical-align: top;
+  padding: 0.25rem 0.35rem;
+  background: var(--card);
+}
+.cal-cell.empty {
+  background: transparent;
+  border-color: transparent;
+}
+.cal-cell.today {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cal-date {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+.cal-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
+}
+.cal-new {
+  color: var(--petrol);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.cal-applied {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+/* The number is clickable: opens a modal with the day's vacancy list. */
+a.cal-new,
+a.cal-applied {
+  text-decoration: none;
+  cursor: pointer;
+  width: fit-content;
+}
+a.cal-new:hover,
+a.cal-applied:hover {
+  text-decoration: underline;
+}
+.cal-legend {
+  color: var(--dim);
+  font-size: 0.76rem;
+  margin-top: 0.8rem;
+}
+.cal-legend .cal-new,
+.cal-legend .cal-applied {
+  font-weight: 700;
+}
+.cal-legend b {
+  color: var(--ink);
+}
+@media (max-width: 560px) {
+  .cal-cell {
+    height: 3.4rem;
+    padding: 0.15rem 0.2rem;
+  }
+  .cal-date {
+    font-size: 0.72rem;
+  }
+  .cal-new,
+  .cal-applied {
+    font-size: 0.62rem;
+  }
+}
+/* Day modal: small, fixed height, with a scrollable vacancy list. */
+.calpop-box {
+  max-width: 26rem;
+  padding: 1rem 1.1rem;
+}
+.calpop-list {
+  max-height: 22rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.2rem;
+}
+.calitem {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  text-decoration: none;
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--paper);
+  color: var(--ink);
+}
+.calitem:hover {
+  background: var(--paper);
+}
+.calitem-score {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-width: 1.4rem;
+  text-align: center;
+  color: var(--petrol);
+}
+.calitem-title {
+  flex: 1 1 auto;
+  font-size: 0.82rem;
+}
+.calitem-co {
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+  color: var(--accent);
+  font-weight: 600;
+}

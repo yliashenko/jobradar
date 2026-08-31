@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% import "partials/_job_card.html" as card with context %}
+{% block content %}
+{% if not found %}
+<div class="empty"><b>Company not found</b>Its vacancies may have aged out or the name changed. <a href="{{ feed_link(params) }}">Back to the feed</a></div>
+{% else %}
+<div class="cohead">
+  <a class="back" href="{{ feed_link(params) }}">← to feed</a>
+  <h1 class="coname">{{ name }}</h1>
+  <p class="costat">{{ count }} vacancies · {{ passed }} passed the filter</p>
+  {% if info.rows or info.tech %}
+  <div class="coinfo">
+    {% for r in info.rows %}<div class="corow"><span class="colabel">{{ r.label }}</span><span class="coval">{% for c in r.chips %}<span class="xchip">{{ c }}</span>{% endfor %}</span></div>{% endfor %}
+    {% if info.tech %}<div class="corow"><span class="colabel">Stack</span><span class="coval cotags">{% for t in info.tech %}{{ ui.tagchip(t.term, params, count=t.count) }}{% endfor %}</span></div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+<div class="colist">
+  {% for r in rows %}{{ card.job_card(r, threshold, params, query, also_on_links=also.get(r['hash'])) }}{% endfor %}
+</div>
+{% endif %}
+{% if not llm_ready %}{{ ui.llm_gate(params.get('token', '')) }}{% endif %}
+{% endblock %}

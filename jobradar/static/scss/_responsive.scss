@@ -1,0 +1,25 @@
+// Global overrides last: focus-visible, narrow screens, reduced-motion.
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--petrol);
+  outline-offset: 2px;
+}
+@media (max-width: 620px) {
+  .score {
+    flex-basis: 3.2rem;
+  }
+  .score .num {
+    font-size: 1.25rem;
+  }
+  .masthead h1 {
+    font-size: 0.9rem;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .job {
+    transition: opacity 0.15s ease;
+  }
+}

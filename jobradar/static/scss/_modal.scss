@@ -1,0 +1,173 @@
+// Modal via :target (no JS) — shared by the resume popup and calendar days.
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(20, 32, 28, 0.55);
+}
+.modal:target {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 1rem;
+}
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--ink);
+  width: 100%;
+  max-width: 46rem;
+  max-height: 88vh;
+  overflow: auto;
+  padding: 1.2rem 1.3rem;
+  position: relative;
+}
+.modal-box h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.modal-box textarea {
+  resize: vertical;
+}
+.modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.8rem;
+  text-decoration: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--dim);
+}
+.modal-close:hover {
+  color: var(--alert);
+}
+.btn-open {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.8rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+.btn-open:hover {
+  background: #0b3937;
+}
+
+// Score details popup (:target) — reuses the .modal / .modal-box chrome.
+// The score number on a card is the trigger (an <a href="#score-…">).
+a.score {
+  text-decoration: none;
+  cursor: pointer;
+}
+a.score:hover .num {
+  text-decoration: underline;
+}
+.scorepop-box {
+  max-width: 34rem;
+}
+.scorepop-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  margin-bottom: 0.7rem;
+  padding-right: 1.4rem; // clear the × close
+}
+.scorepop-badge {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+}
+.scorepop-badge .num {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.scorepop-badge .den {
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.scorepop-id h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.scorepop-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.scorepop-sub b {
+  font-weight: 700;
+}
+.scorepop-rail {
+  height: 16px;
+  margin: 0.2rem 0 0.9rem;
+}
+.scorepop-verdict {
+  margin: 0 0 0.9rem;
+  line-height: 1.5;
+}
+.scorepop-sect {
+  margin: 0 0 0.8rem;
+}
+.scorepop-h {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.scorepop-h.covers {
+  color: var(--strong);
+}
+.scorepop-h.gaps {
+  color: var(--alert);
+}
+.scorepop-points {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.scorepop-points li {
+  margin: 0.15rem 0;
+}
+.scorepop-points.covers li::marker {
+  color: var(--strong);
+}
+.scorepop-points.gaps li::marker {
+  color: var(--alert);
+}
+.scorepop-foot {
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+// Recognized stack terms in the verdict / covers / gaps — underlined so the eye
+// catches the skills inside a sentence (skills.highlight_html wraps them .tech).
+.scorepop .tech {
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* "Add an API key" explanation (:target), shared by the feed score badge and the
+   hiring cover-letter button when no LLM key is configured. */
+.nokey-box {
+  max-width: 32rem;
+}
+.nokey-box p {
+  margin: 0 0 0.7rem;
+  line-height: 1.55;
+  font-size: 0.9rem;
+}
+.nokey-box p:last-child {
+  margin-bottom: 0;
+}

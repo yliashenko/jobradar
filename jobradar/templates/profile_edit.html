@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% block content %}
+<form class="profile" method="post" action="/profile">
+  {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
+
+  <h2>Specialization</h2>
+  <div class="roles">{% for key, label in roles %}<label class="role{% if key == role %} on{% endif %}"><input type="radio" name="role" value="{{ key }}"{% if key == role %} checked{% endif %}> {{ label }}</label>{% endfor %}</div>
+
+  <h2>Stack {{ ui.tooltip('What you master. The general scan is broad (the whole role); here — 3–5 technologies to pull even deeper: each opens a separate window of vacancies. Comma-separated.') }}</h2>
+  <input type="text" name="stack" placeholder="e.g. Playwright, TypeScript, Cypress" value="{{ stack }}">
+
+  <h2>Seniority {{ ui.tooltip('Your level. Filled in from the CV on parsing, you can correct it.') }}</h2>
+  <input type="text" name="seniority" value="{{ seniority }}" placeholder="Senior / Middle / Lead" style="max-width:14rem">
+
+  <h2>CV {{ ui.tooltip('Paste CV text or Markdown in the popup. Save PDF as text first. Detected skills get highlighted in the text — turn off the wrong ones with a click.') }}</h2>
+  <div class="prow">{% if not cv_text.strip() %}<a class="btn-open" href="#cvmodal">Add CV</a>{% else %}<a class="editlink" href="#cvmodal">Edit CV</a>{% endif %}</div>
+
+  {% if cv_text.strip() %}
+  {% if cv and cv.order %}{{ cv.block }}{% else %}<p class="empty">No familiar terms in the text. Try another role or add a skill below.</p>{% endif %}
+  {% endif %}
+
+  <h2>Add a skill {{ ui.tooltip('Two uses: catch a skill the parser missed (if it IS in the CV it shows up highlighted), or add one that is NOT in the CV — the assumed-standard kind few people list, like Scrum or HTTP. Comma-separated. These feed the scorer and stats but are not CV-validated.') }}</h2>
+  <input type="text" name="extra" placeholder="e.g. Scrum, HTTP, RestAssured" value="{{ extra }}">
+
+  <h2>Not for me {{ ui.tooltip('Skills you do NOT position yourself by: "manual testing" — you can, but that is not your thing; "end-to-end" — too generic. Such tags drop out of the stats, and vacancies with them in the TITLE get filtered out, like Junior. Comma-separated.') }}</h2>
+  <input type="text" name="exclude" placeholder="e.g. manual testing, game testing" value="{{ exclude }}">
+
+  <h2>Boundaries & caveats {{ ui.tooltip('The scorer sees this, not the filter. Here is what the skills list hides: "Python is not a work language, but curated LLM code". Without it the score turns optimistic.') }}</h2>
+  <textarea name="notes" rows="5" placeholder="Boundaries that must not blur…">{{ notes }}</textarea>
+
+  <h2>LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic or any OpenAI-compatible endpoint (OpenAI, a gateway, or a local Ollama via base URL). Priority over config.json; stays in profile.json (never committed). Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</h2>
+  <div class="llmgrid">
+    <label class="pfield"><span class="plabel">API key</span><input type="password" name="api_key" value="{{ api_key }}" placeholder="sk-ant-… / sk-…" autocomplete="off"></label>
+    <label class="pfield"><span class="plabel">Provider</span>
+      <select name="llm_provider">
+        <option value="anthropic"{% if llm_provider != 'openai' %} selected{% endif %}>Anthropic (default)</option>
+        <option value="openai"{% if llm_provider == 'openai' %} selected{% endif %}>OpenAI-compatible (OpenAI / gateway / local Ollama)</option>
+      </select>
+    </label>
+    <label class="pfield"><span class="plabel">API base URL</span><input type="text" name="llm_base_url" value="{{ llm_base_url }}" placeholder="empty = provider default · e.g. http://localhost:11434/v1" autocomplete="off"></label>
+    <label class="pfield"><span class="plabel">Cover-letter model</span><input type="text" name="llm_model" value="{{ llm_model }}" placeholder="claude-sonnet-5 / gpt-4o" autocomplete="off"></label>
+  </div>
+
+  <div class="prow save">
+    <button name="action" value="save">Save</button>
+    <button name="action" value="save_scan" class="primary">Save & Scan</button>
+    {% if has_profile %}<a class="editlink" href="{{ profile_link(false, token) }}">Cancel</a>{% endif %}
+  </div>
+
+  <div class="modal" id="cvmodal"><div class="modal-box">
+    <a class="modal-close" href="#" aria-label="Close">×</a>
+    <h3>CV</h3>
+    <textarea name="cv_text" rows="16" placeholder="Paste CV text or Markdown. Save PDF as text first.">{{ cv_text }}</textarea>
+    <div class="prow"><button name="action" value="preview" class="primary">Detect skills</button><a class="editlink" href="#">Done</a></div>
+  </div></div>
+</form>
+{% endblock %}

@@ -1,0 +1,142 @@
+// Page shell chrome: header, masthead, account, Scan button (runbox),
+// and the active-filters bar.
+
+header {
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+  /* Stays on top while the feed scrolls. Below modals (z 100) and tooltips. */
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Active tag filters — their own row, only when there are any. */
+.listbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0 0.2rem;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 0 0.6rem;
+}
+.masthead h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.masthead h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.masthead h1 a:hover {
+  color: var(--petrol);
+}
+.masthead .counts {
+  color: var(--dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+/* Top-right of the header: account on the top line — in a row with Scan, not
+   centered opposite "last scan" (runbox is two lines, align to the first). */
+.topright {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1rem;
+}
+.account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--dim);
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+.account:hover,
+.account.on {
+  border-color: var(--petrol);
+  color: var(--petrol);
+}
+.acc-ico {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+/* Scan! stays in the right corner; status to its left, the time of the last
+   scan below it. That makes the block a column, not a row. */
+.runbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7rem;
+}
+.runrow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.runlast {
+  font-size: 0.7rem;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-align: right;
+}
+.runbox button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.32rem 0.8rem;
+  border: 1px solid var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+  cursor: pointer;
+  border-radius: 0;
+  letter-spacing: 0.06em;
+}
+.runbox button:hover {
+  background: #0b3937;
+}
+.runbox button[disabled] {
+  background: var(--paper);
+  color: var(--dim);
+  border-color: var(--line);
+  cursor: default;
+}
+.runbox .ico {
+  width: 0.9em;
+  height: 0.9em;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.runstat {
+  font-size: 0.72rem;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+.runstat.live {
+  color: var(--petrol);
+  font-weight: 700;
+}
+.runstat.err {
+  color: var(--alert);
+}

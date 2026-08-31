@@ -1,0 +1,527 @@
+// Hiring pipeline page: applied vacancies, each with stage buttons + per-stage
+// notes. The stage buttons mirror the feed's status buttons; the textarea shows
+// the note for the currently selected stage (server-driven, no JS).
+
+/* Full .wrap width, like the rest of the pages — not narrower. */
+.hiring-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0.9rem;
+}
+.hiring-head {
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+}
+/* Show/Hide archived toggle in the header. */
+.hiring-toggle {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.7rem;
+  white-space: nowrap;
+}
+.hiring-toggle:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.hiring-toggle.on {
+  border-color: var(--petrol);
+  color: var(--petrol);
+}
+.hiring-toggle .n {
+  color: var(--dim);
+  margin-left: 0.2rem;
+}
+.hiring-count {
+  color: var(--dim);
+  font-weight: 400;
+  margin-left: 0.3rem;
+}
+.hiring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* Two columns: the main content on the left, a dedicated right-side div holding
+   the vacancy/cover links and the dates (same right block on active + archived). */
+.hcard {
+  display: flex;
+  gap: 1rem;
+  /* stretch so the right column is as tall as the card and the cover-letter
+     button (margin-top: auto) can sit in the bottom-right corner. */
+  align-items: stretch;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-right: 6px solid var(--unscored); /* score-band colour on the right, like the feed */
+  padding: 0.7rem 0.9rem;
+}
+.hcard-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.hcard-side {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+.hcard-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+/* Company sits on its own line, under the title. */
+.hcard-co {
+  display: inline-block;
+  margin-top: 0.15rem;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.hcard-co:hover {
+  text-decoration: underline;
+}
+.hstages {
+  margin-top: 0.6rem;
+}
+.hstage-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.hstage {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--dim);
+  cursor: pointer;
+  border-radius: 0;
+}
+.hstage:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.hstage.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.hstage.noted::after {
+  content: "•";
+  margin-left: 0.35rem;
+  color: var(--petrol);
+}
+.hstage.on.noted::after {
+  color: var(--paper);
+}
+
+.hnote-label {
+  display: block;
+  margin: 0.7rem 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.hnote {
+  width: 100%;
+  margin-top: 0.8rem; /* space between the stage buttons and the notes field */
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  resize: vertical;
+}
+.hnote:focus {
+  outline: none;
+  border-color: var(--petrol);
+}
+.hnote-actions {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.hsave {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+  cursor: pointer;
+}
+.hsave:hover {
+  background: #0b3937;
+}
+/* Disabled until the notes textarea is edited (set by JS; no-JS keeps it usable). */
+.hsave:disabled {
+  background: var(--paper);
+  color: var(--dim);
+  border-color: var(--line);
+  cursor: default;
+}
+
+/* "Finish & archive" — secondary, outlined next to Save; opens the modal. */
+.harch-open {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--line);
+  color: var(--dim);
+}
+.harch-open:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Archived card: muted, terminal. Grey right rule, ignoring the score band. */
+.hcard.archived {
+  border-right-color: var(--line);
+  background: var(--paper);
+}
+.hcard.archived .hcard-title {
+  color: var(--dim);
+}
+.harch-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  padding: 0.05rem 0.4rem;
+}
+.harch-final {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.harch-final b {
+  color: var(--ink);
+  font-weight: 700;
+}
+.harch-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.harch-actions {
+  margin-top: 0.6rem;
+}
+.harch-restore {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--dim);
+  cursor: pointer;
+}
+.harch-restore:hover {
+  border-color: var(--petrol);
+  color: var(--petrol);
+}
+
+/* Finalize-hiring confirm dialog — reuses the .modal / .modal-box chrome. */
+.archpop-box {
+  max-width: 30rem;
+}
+.archpop-box h3 {
+  padding-right: 1.4rem; // clear the × close
+}
+.archpop-text {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.archpop-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8rem;
+}
+.archpop-cancel {
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  color: var(--dim);
+}
+.archpop-cancel:hover {
+  color: var(--ink);
+}
+.archpop-confirm {
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+  cursor: pointer;
+}
+.archpop-confirm:hover {
+  background: #0b3937;
+}
+
+/* Bottom-right of the right column: the cover-letter button, then the source
+   icon to its right. margin-top: auto drops it to the card's bottom. */
+.hcard-side-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.hcard-side-foot .openbox {
+  margin-left: 0; /* the feed pushes it right; here it sits next to the button */
+}
+.hcard-cl {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--petrol);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 0.32rem 0.7rem;
+  border: 1px solid var(--petrol);
+}
+.hcard-cl:hover {
+  background: var(--petrol);
+  color: #fff;
+}
+
+/* The letter modal reuses .modal / .modal-box chrome from _modal.scss. */
+.clpop-box {
+  max-width: 44rem;
+}
+.clpop-sub {
+  margin: 0 0 0.8rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--dim);
+}
+.clpop-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.cl-generate {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+  cursor: pointer;
+}
+.cl-generate:hover {
+  background: #0b3937;
+}
+.cl-generate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.cl-copy {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--dim);
+  cursor: pointer;
+}
+.cl-copy:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+/* Filled pill — the band colour fills the chip, text sits white on top. */
+.cl-band {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid transparent;
+  color: #fff;
+  white-space: nowrap;
+}
+.cl-band:empty {
+  display: none;
+}
+.cl-green {
+  background: var(--strong);
+}
+.cl-edge {
+  background: var(--accent);
+}
+.cl-amber {
+  background: var(--worth);
+}
+.cl-red {
+  background: var(--alert);
+}
+.cl-skip {
+  background: var(--skip);
+}
+
+.cl-status {
+  margin: 0.6rem 0 0;
+  font-size: 0.78rem;
+  min-height: 1.1em;
+}
+.cl-status.busy {
+  color: var(--dim);
+  font-style: italic;
+}
+.cl-status.err {
+  color: var(--alert);
+}
+
+.cl-result {
+  margin-top: 0.7rem;
+}
+.cl-letter {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.cl-fold {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.5rem;
+}
+.cl-fold summary {
+  cursor: pointer;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.cl-eval,
+.cl-trace {
+  margin: 0.5rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+/* Rendered markdown (fit evaluation / traceability preview). */
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
+.md p {
+  margin: 0.5rem 0;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  margin: 0.9rem 0 0.4rem;
+  font-size: 0.83rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.md ul,
+.md ol {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+}
+.md li {
+  margin: 0.2rem 0;
+}
+.md strong {
+  font-weight: 700;
+}
+.md code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.05rem 0.25rem;
+}
+.md pre {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.7rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  overflow-x: auto;
+}
+.md pre code {
+  border: none;
+  padding: 0;
+  background: none;
+}
+.md table {
+  width: 100%;
+  margin: 0.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+.md th,
+.md td {
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.md th {
+  background: var(--paper);
+  font-weight: 700;
+}
+.md blockquote {
+  margin: 0.5rem 0;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--line);
+  color: var(--dim);
+}
+.md a {
+  color: var(--petrol);
+}
+
+/* Narrow screens: the two hiring-card columns stack; the right block aligns left. */
+@media (max-width: 620px) {
+  .hcard {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .hcard-side {
+    align-items: flex-start;
+    order: -1;
+  }
+  .hcard-side-foot {
+    margin-top: 0.3rem;
+  }
+}

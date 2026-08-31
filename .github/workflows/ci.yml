@@ -1,0 +1,49 @@
+# CI — єдиний автоматичний гейт проєкту (CLAUDE.md §5: «main завжди зелений»).
+# Ганяє ті самі перевірки, що й `make check`, на кожен push і PR.
+#
+# Тільки Python-рантайм із src/. E2E (jobradar-e2e/, Playwright/Node) має власний
+# CI і тут не запускається — різні екосистеми, різні пайплайни.
+name: CI
+
+on:
+  push:
+    branches: [main, "refactor/**", "feat/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        # Runtime deps (Flask — ADR-0012) plus the lightweight dev tools inline.
+        # We skip requirements-dev.txt on purpose: no heavy playwright in Python CI.
+        run: python -m pip install --upgrade pip -r requirements.txt ruff mypy coverage pytest libsass
+
+      - name: Lint (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Type check (mypy)
+        run: mypy
+
+      - name: SCSS compiled to app.css is up to date
+        run: |
+          python -c "import sass,sys; sys.exit(0 if open('jobradar/static/app.css').read()==sass.compile(filename='jobradar/static/app.scss', output_style='expanded') else 'app.css застарів — запусти make css')"
+
+      - name: Unit tests under coverage (pytest)
+        run: |
+          coverage run -m pytest
+          coverage report

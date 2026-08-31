@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% block content %}
+{% if data is none %}
+<div class="empty"><b>Nothing to count yet</b>Run a scan — and here you will see how you stand against the market.</div>
+{% else %}
+<div class="stats">
+  <p class="runstat">Slice: {{ total }} vacancies · {{ sources }} · {{ role_label }} {{ ui.tooltip('The slice sources are listed right here. A small sample is a direction, not the truth.') }}</p>
+
+  <div class="statrow">
+    <div class="sect">
+      <h2>Market coverage {{ ui.tooltip('Top-' ~ data.top_n ~ ' skills of the slice by frequency. Higher coverage means a stronger base.') }}</h2>
+      <p class="sub">How many of the market's {{ data.top_n }} most in-demand skills you have</p>
+      <p class="big">{{ data.covered }}<span class="of">/ {{ data.top_n }}</span></p>
+      <div class="meter"><div style="width:{{ '%.0f'|format(coverage_ratio) }}%"></div></div>
+    </div>
+    <div class="sect">
+      <h2>Table stakes {{ ui.tooltip('Without these skills a CV reads weaker. "have" — you have it, "missing" — close it urgently.') }}</h2>
+      <p class="sub">In almost every vacancy — an expectation, not an advantage</p>
+      {% if stakes_have or stakes_lack %}
+        {% if stakes_have %}<p class="statline"><span class="tick">have</span>{% for s in stakes_have %}{{ ui.skill_link(s.term, s.pct, params) }}{% endfor %}</p>{% endif %}
+        {% if stakes_lack %}<p class="statline"><span class="cross">missing</span>{% for s in stakes_lack %}{{ ui.skill_link(s.term, s.pct, params, 'lack') }}{% endfor %}</p>{% endif %}
+      {% else %}<p class="muted">Nothing stood out in this slice.</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="pierow">
+    <div class="sect">
+      <h2>Your strengths {{ ui.tooltip('A sector = how much demand falls on a skill among your strong matches. Build your positioning on this.') }}</h2>
+      <p class="sub">Your skills that are in demand but not ubiquitous — this is your edge</p>
+      {{ ui.pie(diff_pie) }}
+    </div>
+    <div class="sect">
+      <h2>Gaps by leverage {{ ui.tooltip('A bigger sector = more market demand you do not cover. Click a skill in the legend — exactly those vacancies in the feed.') }}</h2>
+      <p class="sub">What is missing, by demand strength — a learning roadmap</p>
+      {{ ui.pie(gaps_pie) }}
+    </div>
+  </div>
+
+  {% if sources_section %}
+  {% set ss = sources_section %}
+  <div class="sect">
+    <h2>Sources {{ ui.tooltip('DOU RSS gives company/salary range/location in the title, but with a 25-cap per feed. Djinni via RSS+API — no cap, structured, but rarely shows the salary range. This is not a shared slice, but "what each source is capable of".') }}</h2>
+    <p class="sub">How much each source gives and what structured data only Djinni provides</p>
+    <div class="statrow">
+      <div class="srcbox">
+        <h3>Vacancies by source</h3>
+        {% for b in ss.src_bars %}{{ ui.srcbar(b) }}{% endfor %}
+      </div>
+      {% if ss.dj_total %}
+      <div class="srcbox">
+        <h3>Djinni: what DOU does not have</h3>
+        <p class="srcline">salary range given in <b>{{ ss.dj_pct }}%</b> ({{ ss.dj_salary }} of {{ ss.dj_total }})</p>
+        {% if ss.eng_bars %}<p class="srcline">English:</p>{% for b in ss.eng_bars %}{{ ui.srcbar(b) }}{% endfor %}{% endif %}
+        {% if ss.fmt_bars %}<p class="srcline">work format:</p>{% for b in ss.fmt_bars %}{{ ui.srcbar(b) }}{% endfor %}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <p class="runstat">Deliberately not shown: score distribution, trends {{ ui.tooltip('Score distribution and the most frequent gaps — the scorer must be enabled. Demand trend — needs weeks of scans. Salary coverage is now in the "Sources" block above.') }}</p>
+</div>
+{% endif %}
+{% endblock %}

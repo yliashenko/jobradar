@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+
+{% macro cal_item(row) %}
+<a class="calitem" href="{{ row_get(row, 'url') }}" target="_blank" rel="noopener" title="open on {{ row_get(row, 'source') }}">{% if row['score'] is not none %}<span class="calitem-score s-{{ row['band'] or '' }}">{{ '%g'|format(row['score']) }}</span>{% endif %}<span class="calitem-title">{{ row['title'] }}</span>{% if row['company'] %}<span class="calitem-co">{{ row['company'] }}</span>{% endif %}</a>
+{%- endmacro %}
+
+{% macro cal_modal(m, gen_month) %}
+<div class="modal calpop" id="{{ m.anchor }}"><div class="modal-box calpop-box">
+  <a class="modal-close" href="#" aria-label="Close">×</a>
+  <h3>{{ m.day }} {{ gen_month }} · {{ m.label }} ({{ m.rows|length }})</h3>
+  <div class="calpop-list">{% for row in m.rows %}{{ cal_item(row) }}{% endfor %}</div>
+</div></div>
+{% endmacro %}
+
+{% block content %}
+<div class="cal">
+  <div class="cal-head">
+    <a class="cal-arrow" href="{{ calendar_link(params, prev[0], prev[1]) }}" title="previous month">←</a>
+    <h2 class="cal-title">{{ month_name }} {{ year }}</h2>
+    <a class="cal-arrow" href="{{ calendar_link(params, next[0], next[1]) }}" title="next month">→</a>
+  </div>
+
+  <form class="cal-pick" method="get" action="/calendar">
+    {% if params.get('token') %}<input type="hidden" name="token" value="{{ params.token }}">{% endif %}
+    {{ ui.select('month', month|string, month_opts) }}
+    <input type="number" name="year" value="{{ year }}" min="2000" max="2100" style="width:5.5rem">
+    <button>Show</button>
+    <a class="cal-today" href="{{ calendar_link(params, today.year, today.month) }}">Today</a>
+  </form>
+
+  <table class="cal-grid">
+    <thead><tr>{% for d in weekdays %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for week in weeks %}
+      <tr>
+        {% for cell in week %}
+        {% if cell is none %}<td class="cal-cell empty"></td>
+        {% else %}
+        <td class="cal-cell{% if cell.is_today %} today{% endif %}">
+          <span class="cal-date">{{ cell.day }}</span>
+          <span class="cal-metrics">
+            {% if cell.new %}<a class="cal-new" href="#calN-{{ cell.dstr }}" data-testid="calendar-day" data-day="{{ cell.dstr }}" title="new vacancies found">+{{ cell.new }}</a>{% endif %}
+            {% if cell.applied %}<a class="cal-applied" href="#calA-{{ cell.dstr }}" data-testid="calendar-day" data-day="{{ cell.dstr }}" title="applications sent">✓{{ cell.applied }}</a>{% endif %}
+          </span>
+        </td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="cal-legend"><span class="cal-new">+N</span> new found · <span class="cal-applied">✓M</span> applications — click a number to open the list. In {{ month_name }}: <b>{{ total_new }}</b> new, <b>{{ total_applied }}</b> applications.</p>
+</div>
+{% for m in modals %}{{ cal_modal(m, gen_month) }}{% endfor %}
+{% endblock %}

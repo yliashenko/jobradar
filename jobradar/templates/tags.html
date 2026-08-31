@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% block content %}
+{% if not sections %}
+<div class="empty"><b>Nothing to count yet</b>
+Run a scan — and here you will see which stack is in demand.</div>
+{% else %}
+<p class="runstat">{{ total }} vacancies in the database (those that passed the filter), {{ unique }} dictionary
+terms found. The number next to a tag — in how many vacancies it is mentioned. Select
+a few and hit Apply — the feed will keep vacancies that have ALL the selected ones.</p>
+{% for sect in sections %}
+<div class="sect">
+  <h2>{{ sect.name | group_label }} <span class="dimn">{{ sect.tags|length }}</span></h2>
+  <div class="cloud">
+    {% for t in sect.tags %}{{ ui.tagchip(t.term, params, count=t.count, font_size=t.font_size, path='/tags') }}{% endfor %}
+  </div>
+</div>
+{% endfor %}
+<div class="pickbar">
+  <a class="apply" href="{{ tech_url(params, included, excluded, '/') }}">Apply</a>
+  <a class="clear" href="{{ page_link('/tags', clear_params) }}">Reset</a>
+  {% if included or excluded %}<span class="runstat">selected: {{ included|length }}, excluded: {{ excluded|length }}</span>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

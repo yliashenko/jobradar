@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+
+{% block content %}
+<section class="hiring">
+  <div class="hiring-head-row">
+    <h2 class="hiring-head">Applied <span class="hiring-count" data-testid="hiring-count">{{ count }}</span></h2>
+    {% if archived_count or show_archived %}
+    <a class="hiring-toggle{% if show_archived %} on{% endif %}" href="{{ toggle_href }}" data-testid="hiring-archived-toggle">{% if show_archived %}Hide archived{% else %}Show archived{% endif %} <span class="n">{{ archived_count }}</span></a>
+    {% endif %}
+  </div>
+
+  {% if not rows %}
+  <p class="empty">Nothing here yet. Mark a vacancy as <b>applied</b> in the feed and it moves into the hiring pipeline.</p>
+  {% else %}
+  <div class="hiring-list" data-testid="hiring-list">
+    {% for row in rows %}
+    {%- set sel = hiring_sel(row) -%}
+    {%- set notes = hiring_notes(row) -%}
+    {%- set cov = hiring_cover(row) -%}
+    {%- set band = row|band_class -%}
+    {% if row['status'] == 'archived' %}
+    {%- set final = row['hiring_status'] or 'finish' -%}
+    <article class="hcard vcard archived b-{{ band }}" data-testid="hiring-card" data-hash="{{ row['hash'] }}" data-archived="1">
+      <div class="hcard-body">
+        <h3 class="hcard-title">{{ row['title'] }}</h3>
+        {% if row['company'] %}<a class="hcard-co" href="{{ company_link(row['company'], params) }}">{{ row['company'] }}</a>{% endif %}
+        <p class="harch-final">Finished at <b>{{ HIRING_LABELS[final] }}</b></p>
+        {% if notes.get(final) %}<p class="harch-note">{{ notes.get(final) }}</p>{% endif %}
+        <form method="post" action="/hiring/update" class="harch-actions">
+          <input type="hidden" name="hash" value="{{ row['hash'] }}">
+          <input type="hidden" name="back" value="{{ back }}">
+          <input type="hidden" name="restore" value="1">
+          <button class="harch-restore" data-testid="hiring-restore">↩ Restore to Applied</button>
+        </form>
+      </div>
+      <div class="hcard-side">
+        <div class="score s-{{ band }}" title="fit score"><span class="num">{{ row|score_text }}</span><span class="den">/10</span></div>
+        {{ ui.card_dates(row) }}
+        <div class="hcard-side-foot">
+          <span class="harch-badge" data-testid="hiring-archived-badge">Archived</span>
+          {{ ui.openbox(row) }}
+        </div>
+      </div>
+    </article>
+    {% else %}
+    <article class="hcard vcard b-{{ band }}" data-testid="hiring-card" data-hash="{{ row['hash'] }}">
+      <div class="hcard-body">
+        <h3 class="hcard-title">{{ row['title'] }}</h3>
+        {% if row['company'] %}<a class="hcard-co" href="{{ company_link(row['company'], params) }}">{{ row['company'] }}</a>{% endif %}
+        {% if row['location'] %}<span class="job-where">{{ row['location'] }}</span>{% endif %}
+        {{ ui.card_facts(row) }}
+
+      <form method="post" action="/hiring/update" class="hstages" data-testid="hiring-form">
+        <input type="hidden" name="hash" value="{{ row['hash'] }}">
+        <input type="hidden" name="back" value="{{ back }}">
+        <input type="hidden" name="stage" value="{{ sel }}">
+        <div class="hstage-btns">
+          {% for stage in HIRING_ORDER %}
+          <button class="hstage{% if stage == row['hiring_status'] %} on{% endif %}{% if notes.get(stage) %} noted{% endif %}" name="go" value="{{ stage }}" data-testid="hiring-stage" data-stage="{{ stage }}" title="{% if notes.get(stage) %}has notes{% else %}move to this stage{% endif %}">{{ HIRING_LABELS[stage] }}</button>
+          {% endfor %}
+        </div>
+        <textarea class="hnote" id="note-{{ row['hash'] }}" name="note" rows="3" placeholder="What's happening at this stage…" data-testid="hiring-note">{{ notes.get(sel, '') }}</textarea>
+        <div class="hnote-actions">
+          <button class="hsave" name="go" value="" data-testid="hiring-save">Save notes</button>
+          {% if sel == 'finish' %}<a class="harch-open" href="#archive-{{ row['hash'] }}" data-testid="hiring-archive-open">Finish &amp; archive</a>{% endif %}
+        </div>
+      </form>
+      </div>
+
+      <div class="hcard-side">
+        <div class="score s-{{ band }}" data-testid="hiring-score" title="fit score"><span class="num">{{ row|score_text }}</span><span class="den">/10</span></div>
+        {{ ui.card_dates(row) }}
+        <div class="hcard-side-foot">
+          <a class="hcard-cl" href="{% if llm_ready or cov %}#cover-{{ row['hash'] }}{% else %}#llm-nokey{% endif %}" data-testid="hiring-cover-open" title="cover letter">✍ Cover letter{% if cov %} ✓{% endif %}</a>
+          {{ ui.openbox(row) }}
+        </div>
+      </div>
+
+      {% if sel == 'finish' %}
+      <div class="modal" id="archive-{{ row['hash'] }}" data-testid="hiring-archive-modal" role="dialog" aria-modal="true" aria-label="finalize hiring process">
+        <div class="modal-box archpop-box">
+          <a class="modal-close" href="#" aria-label="Close">×</a>
+          <h3>Finalize hiring process?</h3>
+          <p class="archpop-text">Move <b>{{ row['title'] }}</b>{% if row['company'] %} at {{ row['company'] }}{% endif %} to the archive. This ends the pipeline for this vacancy — you can bring it back later with <b>Show archived</b>. Saved notes are kept.</p>
+          <form method="post" action="/hiring/update" class="archpop-actions">
+            <input type="hidden" name="hash" value="{{ row['hash'] }}">
+            <input type="hidden" name="back" value="{{ back }}">
+            <input type="hidden" name="archive" value="1">
+            <a class="archpop-cancel" href="#">Cancel</a>
+            <button class="archpop-confirm" data-testid="hiring-archive-confirm">Archive</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="modal" id="cover-{{ row['hash'] }}" data-testid="hiring-cover-modal" data-token="{{ params.get('token', '') }}" role="dialog" aria-modal="true" aria-label="cover letter">
+        <div class="modal-box clpop-box">
+          <a class="modal-close" href="#" aria-label="Close">×</a>
+          <h3>Cover letter — {{ row['title'] }}</h3>
+          <p class="clpop-sub">Written from <b>career-facts.md</b> against this posting. Facts only, gaps named. Review before sending.</p>
+          <div class="clpop-actions">
+            <button class="cl-generate" data-hash="{{ row['hash'] }}"{% if cov %} data-regenerate="1"{% endif %} data-testid="hiring-cover-generate">{% if cov %}Regenerate{% else %}Generate cover letter{% endif %}</button>
+            <button class="cl-copy" type="button" data-testid="hiring-cover-copy">Copy</button>
+            <span class="cl-band cl-{{ cover_band_class(cov.band) }}" data-testid="hiring-cover-band">{% if cov.band %}{{ cov.band }}{% if cov.fit_score is not none %} · {{ cov.fit_score }}{% endif %}{% endif %}</span>
+          </div>
+          <div class="cl-status"></div>
+          <div class="cl-result"{% if not cov %} hidden{% endif %}>
+            <pre class="cl-letter" data-testid="hiring-cover-letter">{{ cov.letter or '' }}</pre>
+            <details class="cl-fold"><summary>Fit evaluation</summary><div class="cl-eval md">{{ cov.evaluation | md }}</div></details>
+            <details class="cl-fold"><summary>Traceability map</summary><div class="cl-trace md">{{ cov.traceability | md }}</div></details>
+          </div>
+        </div>
+      </div>
+    </article>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if not llm_ready %}{{ ui.llm_gate(params.get('token', '')) }}{% endif %}
+</section>
+{% endblock %}

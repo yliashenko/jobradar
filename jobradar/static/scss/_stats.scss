@@ -1,0 +1,200 @@
+// Statistics: big numbers, meters, skill chips, pie charts, source comparison.
+
+/* Full .wrap width, like the rest of the pages — not narrower. */
+.stats .sub {
+  color: var(--dim);
+  font-size: 0.78rem;
+  margin: 0.1rem 0 0.6rem;
+  line-height: 1.4;
+}
+.stats .big {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0.2rem 0;
+}
+.stats .big .of {
+  font-size: 1rem;
+  color: var(--dim);
+  font-weight: 400;
+  margin-left: 0.4rem;
+}
+.stats .meter {
+  height: 8px;
+  background: var(--line);
+  margin: 0.3rem 0 0.5rem;
+  max-width: 22rem;
+}
+.stats .meter > div {
+  height: 100%;
+  background: var(--strong);
+}
+.statline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  margin: 0.4rem 0;
+}
+.statline .tick,
+.statline .cross {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.05rem 0.35rem;
+  margin-right: 0.2rem;
+}
+.statline .tick {
+  color: var(--strong);
+  border: 1px solid var(--strong);
+}
+.statline .cross {
+  color: var(--alert);
+  border: 1px solid var(--alert);
+}
+.statskill {
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 0.05rem 0.4rem;
+  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.statskill .pct {
+  color: var(--dim);
+  font-size: 0.66rem;
+}
+.statskill:hover {
+  border-color: var(--petrol);
+  color: var(--petrol);
+}
+.statskill.diff {
+  border-color: var(--accent);
+}
+.statskill.diff:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.statskill.diff:hover .pct {
+  color: #fff;
+}
+.statskill.lack {
+  border-color: var(--alert);
+  color: var(--alert);
+}
+.statskill.gap {
+  border-color: var(--accent);
+}
+/* Two sections in a row; on narrow screens — stacked. */
+.statrow,
+.pierow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.4rem;
+  align-items: start;
+}
+@media (max-width: 680px) {
+  .statrow,
+  .pierow {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+/* Pie: chart centered on top, legend below it across the full cell width —
+   so two charts in a row don't squeeze or drift. */
+.piewrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+.pie {
+  width: unquote("min(260px, 92%)");
+  height: auto;
+  flex: 0 0 auto;
+}
+.pielegend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.76rem;
+  width: 100%;
+}
+.pielegend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.14rem 0;
+}
+.pielegend .sw {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: 0 0 auto;
+}
+.pielegend .lc {
+  color: var(--dim);
+  font-size: 0.72rem;
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+.pielegend a {
+  text-decoration: none;
+  color: var(--ink);
+}
+.pielegend a:hover {
+  color: var(--petrol);
+}
+ul.later {
+  margin: 0.3rem 0;
+  padding-left: 1.1rem;
+  color: var(--dim);
+  font-size: 0.78rem;
+}
+
+/* Source comparison: a "label — bar — number" row. The bar is normalized to
+   its own block (share of all / of Djinni), so DOU and Djinni don't mix. */
+.srcbox h3 {
+  font-size: 0.82rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.02em;
+}
+.srcline {
+  color: var(--dim);
+  font-size: 0.76rem;
+  margin: 0.5rem 0 0.2rem;
+}
+.srcbar {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  padding: 0.1rem 0;
+}
+.srcbar .k {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.srcbar .m {
+  height: 7px;
+  background: var(--line);
+}
+.srcbar .m > span {
+  display: block;
+  height: 100%;
+  background: var(--petrol);
+}
+.srcbar .v {
+  text-align: right;
+  color: var(--dim);
+}
+ul.later li {
+  margin-bottom: 0.2rem;
+}

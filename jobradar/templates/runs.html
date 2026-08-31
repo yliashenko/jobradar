@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="sect">
+  <h2>Recent scans</h2>
+  <table class="rt">
+    <tr>{% for h in ['scan', 'trigger', 'fetched', 'dupes', 'dropped', 'new', 'to TG', 'took'] %}<th>{{ h }}</th>{% endfor %}</tr>
+    {% for run in runs %}
+    <tr{% if current and run.id == current.id %} class="on"{% endif %}>
+      <td><a href="/runs?{{ ({'run': run.id, 'token': token} if token else {'run': run.id})|urlencode }}">{{ run.started_at|fmt_iso('%d.%m %H:%M') }}</a></td>
+      <td class="dim">{{ 'button' if run.triggered_by == 'button' else 'schedule' }}</td>
+      <td>{{ run.fetched }}</td>
+      <td class="dim">{{ run.dup_skipped }}</td>
+      <td class="dim">{{ run.l0_dropped }}</td>
+      <td{% if run.fetched and not run.added %} class="zero"{% endif %}>{{ run.added }}</td>
+      <td class="dim">{{ run.notified }}</td>
+      <td class="dim">{% if run.finished_at %}{{ run.started_at|duration_text(run.finished_at) }}{% else %}not finished{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% if current %}
+<div class="cols">
+  <div class="sect">
+    <h2>Where it came from — scan {{ current.started_at|fmt_iso('%d.%m %H:%M') }}</h2>
+    {% if not feeds['items'] %}
+    <p class="runstat">The scan queried nothing — sources are disabled in the config.</p>
+    {% else %}
+    <table class="rt">
+      <tr><th>feed</th><th>records</th><th>window</th></tr>
+      {% for f in feeds['items'] %}
+      <tr>
+        <td>{{ f.feed|feed_label }}{% if f.error %}<div class="runstat err">{{ f.error|humanize_feed_error }}</div>{% endif %}</td>
+        {% if f.error %}<td class="zero">failed</td>
+        {% elif f.cap %}<td class="cap">{{ f.count }} ← cap</td>
+        {% else %}<td{% if f.count == 0 %} class="zero"{% endif %}>{{ f.count }}</td>{% endif %}
+        <td class="dim">{% if f.hours %}{{ '%g'|format(f.hours) }} h{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if feeds['any_cap'] %}
+    <p class="runstat cap-note">The feed returns at most {{ feeds['cap'] }} records at a time, so the flagged ones show only the latest {{ feeds['cap'] }} — a window.{% if feeds['narrowest'] %} The narrowest of them holds {{ '%g'|format(feeds['narrowest']) }} h of market — as long as that is more than the interval between scans, nothing is lost.{% endif %}</p>
+    {% endif %}
+    {% endif %}
+  </div>
+  <div class="sect">
+    <h2>What happened to it</h2>
+    <div class="funnel">
+      <div><span class="n">{{ funnel.fetched }}</span><span>fetched from sources</span></div>
+      <div><span class="n minus">−{{ funnel.dup_skipped }}</span><span class="minus">already seen before (dedup)</span></div>
+      <div><span class="n minus">−{{ funnel.l0_dropped }}</span><span class="minus">dropped by the L0 filter</span></div>
+      <div class="sum"><span class="n">{{ funnel.added }}</span><span>new in the feed</span></div>
+      {% if funnel.converges %}
+      <span class="note">{{ funnel.fetched }} = {{ funnel.triple }} — the funnel converges, no record was lost along the way.</span>
+      {% else %}
+      <span class="note bad">Warning: {{ funnel.fetched }} ≠ {{ funnel.triple }}. Records are being lost — that is a bug, not a quiet market.</span>
+      {% endif %}
+      {% if funnel.revived %}<span class="note">Of those, {{ funnel.revived }} — roles reopened after a pause of over half a year.</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="sect">
+  <h2>Who the filter dropped and by which rule</h2>
+  {% if not l0_drops %}
+  <p class="runstat">This scan dropped nothing.</p>
+  {% else %}
+  {% for d in l0_drops %}
+  <div class="reason">
+    <div class="rule"><b>{{ d.count }}</b> · {{ d.reason|humanize_l0_reason }}<div class="raw">rule in config.json: {{ d.reason or '—' }}</div></div>
+    <ul>
+      {% for it in d['items'] %}<li>{{ it.title }}{% if it.company %} — {{ it.company }}{% endif %}</li>{% endfor %}
+      {% if d.more %}<li>…{{ d.more }} more</li>{% endif %}
+    </ul>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<div class="sect">
+  <h2>What dedup flagged as a repeat</h2>
+  {% if not dups %}
+  <p class="runstat">No duplicates in this scan — everything that arrived, the radar saw for the first time.</p>
+  {% else %}
+  {% for d in dups %}
+  <div class="pair">
+    <div class="who">{{ d.new_title }}{% if d.new_company %} — {{ d.new_company }}{% endif %}</div>
+    <div class="side"><span class="tag">arrived</span> {{ d.new_source }} · <a href="{{ d.new_url }}" target="_blank" rel="noopener">{{ d.new_url[:80] }}</a></div>
+    {% if d.old_url is none %}
+    <div class="side">The record it merged with has already been removed from the database.</div>
+    {% else %}
+    <div class="side"><span class="tag">merged with</span> {{ d.old_source }} · {{ d.old_title }}{% if d.old_company %} — {{ d.old_company }}{% endif %} · <a href="{{ d.old_url }}" target="_blank" rel="noopener">{{ d.old_url[:80] }}</a> · first seen {{ d.old_seen|fmt_iso }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% else %}
+<div class="empty"><b>The log is empty</b>A breakdown of each scan will appear here as soon as you run the first scan.</div>
+{% endif %}
+
+<footer>The full duplicate list is kept for the last {{ keep_dups }} scans; the scan rows themselves — forever.</footer>
+{% endblock %}

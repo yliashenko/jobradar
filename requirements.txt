@@ -1,0 +1,11 @@
+# Runtime dependencies (ADR-0012). Install into the app's environment:
+#   pip install -r requirements.txt
+# The dev/test/lint layer lives in requirements-dev.txt.
+
+# Web layer: server-rendered HTML. Jinja2 ships with Flask.
+Flask>=3
+
+# Markdown → HTML for the cover-letter fit evaluation / traceability preview.
+# escape=True keeps model output from injecting raw HTML; the table plugin
+# renders the requirement matrix.
+mistune>=3

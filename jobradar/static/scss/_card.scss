@@ -1,0 +1,527 @@
+// Vacancy card: title, score, description, stack tags, score rail,
+// actions, source logos, empty feed state.
+
+.job {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-right: 6px solid var(--unscored);
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.9rem;
+}
+/* Score-band colour on the card's right edge — shared by the feed and hiring
+   cards, both tagged .vcard, which sets the base border-right. The two-class
+   selector outranks the per-card .job / .hcard base regardless of source order. */
+.vcard.b-strong {
+  border-right-color: var(--strong);
+}
+.vcard.b-worth_trying {
+  border-right-color: var(--worth);
+}
+.vcard.b-stretch {
+  border-right-color: var(--stretch);
+}
+.vcard.b-skip {
+  border-right-color: var(--skip);
+}
+.job.done {
+  opacity: 0.55;
+}
+
+.job-head {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+.job-head .body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* top-right corner of the card: score and publish date */
+.corner {
+  flex: 0 0 auto;
+  text-align: right;
+}
+.score {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 1px;
+}
+.score .num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.score .den {
+  font-size: 0.68rem;
+  color: var(--dim);
+}
+/* Card dates (shared by the feed and hiring cards via the card_dates macro):
+   stacked and right-aligned on both. Each card only sets spacing. */
+.dates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+.date {
+  font-size: 0.7rem;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.date .dlabel {
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+/* Status-change date: the accent colour ties it to the triage buttons. */
+.date.upd {
+  color: var(--accent);
+}
+.date.old {
+  color: var(--worth);
+}
+/* Feed: sits under the score in the top-right corner. */
+.corner .dates {
+  margin-top: 0.3rem;
+}
+.s-strong {
+  color: var(--strong);
+}
+.s-worth_trying {
+  color: var(--worth);
+}
+.s-stretch {
+  color: var(--stretch);
+}
+.s-skip {
+  color: var(--skip);
+}
+.s-none {
+  color: var(--unscored);
+}
+
+/* Both are spans inside a summary (which allows only text content), so
+   block display has to be turned on by hand. */
+.job-title {
+  display: block;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.job-meta {
+  display: block;
+  color: var(--dim);
+  font-size: 0.76rem;
+  margin-top: 0.15rem;
+}
+.job-meta .sep {
+  opacity: 0.4;
+}
+/* The company is the one thing in the row the eye catches during triage: it
+   decides as much as the title ("that same outsourcer again"). Hence the accent here. */
+.job-meta .co {
+  color: var(--accent);
+  font-weight: 700;
+}
+a.co {
+  text-decoration: none;
+  cursor: pointer;
+}
+a.co:hover {
+  text-decoration: underline;
+}
+/* Country and work format — their own row: a different axis than company and salary range. */
+.job-where {
+  display: block;
+  color: var(--dim);
+  font-size: 0.76rem;
+  margin-top: 0.1rem;
+}
+
+/* Expanding the description — a details tag, without a single line of JS. */
+details.unfold > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.unfold > summary::-webkit-details-marker {
+  display: none;
+}
+details.unfold > summary:hover .job-title {
+  text-decoration: underline;
+}
+.caret {
+  color: var(--dim);
+  font-size: 0.7rem;
+  margin-left: 0.4rem;
+  display: inline-block;
+}
+details.unfold[open] > summary .caret {
+  transform: rotate(90deg);
+}
+.no-desc .caret {
+  opacity: 0.25;
+}
+
+/* The description lives at the very bottom of the card (below tags, rail,
+   statuses) and is revealed by the summary's <details> without moving anything
+   above it — :has() lets a sibling toggle drive it, so no JS. */
+.desc {
+  display: none;
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  max-width: 62ch;
+}
+.job:has(details.unfold[open]) .desc {
+  display: block;
+}
+.desc p {
+  margin: 0 0 0.6rem;
+}
+.desc ul,
+.desc ol {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+}
+.desc li {
+  margin-bottom: 0.2rem;
+}
+.desc h3 {
+  font-size: 0.82rem;
+  margin: 0.8rem 0 0.3rem;
+  letter-spacing: 0.04em;
+}
+.desc strong,
+.desc b {
+  font-weight: 700;
+}
+/* Stack terms. Color, not just weight: in DOU descriptions half the text is
+   already wrapped in <strong>, and plain bold doesn't stand out among it. */
+.desc b.tech,
+.desc a.tech {
+  color: var(--petrol);
+  font-weight: 700;
+}
+.desc a.tech {
+  text-decoration: none;
+  border-bottom: 1px dotted var(--petrol);
+}
+.desc a.tech:hover {
+  background: var(--petrol);
+  color: #fff;
+  border-bottom-color: transparent;
+}
+
+/* Active tags above the list: each its own chip with its own cross, so you
+   can drop one and see what changed. */
+.activetags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.activetags .pair {
+  display: inline-flex;
+  align-items: stretch;
+}
+.activetags .drop {
+  text-decoration: none;
+  color: var(--dim);
+  font-size: 0.72rem;
+  border: 1px solid var(--line);
+  border-left: none;
+  padding: 0 0.3rem;
+  display: inline-flex;
+  align-items: center;
+}
+.activetags .drop:hover {
+  background: var(--alert);
+  color: #fff;
+  border-color: var(--alert);
+}
+.activetags .clear {
+  font-size: 0.72rem;
+}
+
+/* Card tags: what the vacancy is about, visible without expanding the description. */
+/* Salary range — a prominent row above the smaller fields (English lives in .job-extra). */
+.keyfacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+.kf {
+  font-size: 0.74rem;
+  padding: 0.08rem 0.5rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.kf-pay {
+  color: var(--petrol);
+  border-color: var(--petrol);
+  background: var(--paper);
+}
+
+/* A soft hint "looks like it's also on another board" — not a dedup fact, so
+   small and dashed, to avoid confusion with exact cross-post logos. */
+.alsoon {
+  font-size: 0.72rem;
+  color: var(--dim);
+  margin: 0.5rem 0 0;
+}
+.alsoon-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent);
+}
+.alsoon-link:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* Structured Djinni fields (empty for DOU → the row doesn't appear). */
+.job-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+.job-extra .xchip {
+  font-size: 0.7rem;
+  color: var(--petrol);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 0.05rem 0.4rem;
+  letter-spacing: 0.02em;
+}
+.job-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.55rem;
+  align-items: center;
+}
+.moretags > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--dim);
+  font-size: 0.72rem;
+  border: 1px dashed var(--line);
+  padding: 0.05rem 0.35rem;
+}
+.moretags > summary::-webkit-details-marker {
+  display: none;
+}
+.moretags > summary:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.moretags[open] {
+  flex: 1 0 100%;
+}
+.moretags[open] > summary {
+  display: inline-block;
+  margin-bottom: 0.25rem;
+}
+.more-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.dimn {
+  color: var(--dim);
+  font-weight: 400;
+}
+.desc blockquote {
+  margin: 0 0 0.6rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--line);
+  color: var(--dim);
+}
+.desc .none {
+  color: var(--dim);
+}
+
+/* mark on the shared 0–10 scale — every row uses the same rail */
+.rail {
+  position: relative;
+  height: 14px;
+  margin: 0.5rem 0 0.1rem;
+}
+.rail-line {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+.rail::before,
+.rail::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  width: 1px;
+  height: 9px;
+  background: var(--line);
+}
+.rail::before {
+  left: 0;
+}
+.rail::after {
+  right: 0;
+}
+.rail-mark {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 13px;
+  background: currentColor;
+  transform: translateX(-2px);
+}
+.rail-threshold {
+  position: absolute;
+  top: 2px;
+  width: 1px;
+  height: 9px;
+  background: var(--alert);
+  opacity: 0.55;
+}
+
+.verdict {
+  margin: 0.35rem 0 0;
+}
+.points {
+  margin: 0.35rem 0 0;
+  font-size: 0.79rem;
+  color: var(--dim);
+}
+.points b {
+  color: var(--ink);
+  font-weight: 400;
+}
+.points .gap {
+  color: var(--alert);
+}
+
+.actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.actions button,
+.actions a.open {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--dim);
+  cursor: pointer;
+  border-radius: 0;
+}
+.actions button:hover,
+.actions a.open:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.actions button.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+/* Cover-letter CTA — offered only on interested cards. Petrol outline to set it
+   apart from the neutral status buttons; opens the same letter modal as /hiring.
+   margin-left:auto pushes it to the right so it sits just left of the source
+   icon (openbox), matching the hiring card's side-foot order. */
+.actions .job-cl {
+  margin-left: auto;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--petrol);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--petrol);
+}
+.actions .job-cl:hover {
+  background: var(--petrol);
+  color: #fff;
+}
+/* With two margin-left:auto siblings flex splits the free space between them,
+   stranding the CTA mid-row. Drop openbox's auto when the CTA precedes it, so
+   the single remaining auto pushes the pair right and the source icon sits
+   right next to Cover letter. */
+.actions .job-cl + .openbox {
+  margin-left: 0;
+}
+/* Source — a clickable logo on the right that leads to the vacancy. A cross-post
+   (several sources) shows several logos side by side, so it's clearly not a duplicate. */
+.openbox {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+a.srcicon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+  opacity: 0.9;
+  transition:
+    opacity 0.1s,
+    transform 0.1s;
+}
+a.srcicon:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+.srclogo {
+  width: 22px;
+  height: 22px;
+  display: block;
+  border-radius: 4px;
+  object-fit: cover;
+}
+/* Source without a logo (email) — a text label instead of an image. */
+.srctext {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--petrol);
+}
+
+.empty {
+  border: 1px dashed var(--line);
+  padding: 2rem 1rem;
+  margin-top: 1rem;
+  color: var(--dim);
+  text-align: center;
+  background: var(--card);
+}
+.empty b {
+  display: block;
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+
+.l0 {
+  color: var(--alert);
+  font-size: 0.74rem;
+  margin-top: 0.3rem;
+}

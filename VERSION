@@ -1,0 +1,9 @@
+jobradar 1.4
+Assembled: 2026-08-14
+Runtime code: 1.0 + Stage A (Scan! button and runner.py, the runs/run_dups
+run journal and the /runs page, cleaned-up description + publish date,
+rebuilt card). pytest is green.
+New since 1.3: ADR-0004 — pytest as the dev layer; requirements-dev.txt;
+tests/ with the first 8 pytest tests; updated test convention, the
+git green criterion and the commands in CLAUDE.md.
+Rubric version: v2 (see RUBRIC_VERSION in core/scoring.py)

@@ -1,0 +1,8 @@
+{
+  // Open .html in this project as jinja-html (Better Jinja) so {{ ... }} and
+  // {% ... %} are highlighted, not shown as plain white text. Workspace-scoped,
+  // so it only affects this repo — every .html here is a Flask/Jinja template.
+  "files.associations": {
+    "*.html": "jinja-html"
+  }
+}

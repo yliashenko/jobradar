@@ -1,0 +1,298 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - button "Toggle color theme" [ref=e5] [cursor=pointer]: "â—\x90 theme"
+    - paragraph [ref=e6]: System notes Â· jobradar
+    - heading "Job Radar Internals" [level=1] [ref=e7]
+    - paragraph [ref=e8]:
+      - text: "Three schematics of the tool that turns job-board noise into a short, honestly-scored feed: the Playwright test rig that boots the real app, the"
+      - code [ref=e9]: scan pipeline
+      - text: and where each stage
+      - emphasis [ref=e10]: drops
+      - text: a record, and the two state machines a vacancy moves through in triage.
+    - generic [ref=e11]:
+      - generic [ref=e12]: drawn 2026-09-01
+      - generic [ref=e13]: source of truth code + docs/adr
+      - generic [ref=e14]: stack Flask Â· SQLite Â· Playwright/TS
+      - generic [ref=e15]: rubric v2 Â· notify â‰¥ 6
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: "01"
+      - generic [ref=e19]:
+        - paragraph [ref=e20]: Test automation framework
+        - heading "The fixture owns the system under test" [level=2] [ref=e21]
+    - paragraph [ref=e22]:
+      - text: There is no
+      - code [ref=e23]: webServer
+      - text: block. A worker-scoped fixture (
+      - code [ref=e24]: fixtures/server.ts
+      - text: ) boots a real
+      - code [ref=e25]: jobradar
+      - text: Flask process per worker on its own port, seeds a real SQLite DB
+      - emphasis [ref=e26]: through the product's own schema
+      - text: (there is no write API for vacancies), then resets state before every test by copying a pristine template back over
+      - code [ref=e27]: jobs.db
+      - text: . Specs drive that live process three ways.
+    - figure [ref=e28]:
+      - generic [ref=e29]:
+        - text: jobradar-e2e Â· lifecycle & layers
+        - generic [ref=e31]: FIG.01
+      - 'img "Architecture of the Playwright test framework: npm scripts run playwright.config, which discovers specs; specs import a worker-scoped fixture in server.ts that creates a temp JOBRADAR_HOME, seeds jobs.db via seed.py through the product schema, spawns the Flask app, waits for health, and resets the DB from a template before each test; specs then drive the running Flask app through page objects, raw testid locators, or the API request context." [ref=e33]':
+        - generic [ref=e34]: author time
+        - generic [ref=e35]: runtime it boots
+        - generic [ref=e37]: CI Â· npm scripts
+        - generic [ref=e38]: playwright test --grep @tag
+        - generic [ref=e39]: runs
+        - generic [ref=e41]: playwright.config.ts
+        - generic [ref=e42]: testDir ./specs Â· no webServer
+        - generic [ref=e43]: "projects: chromium Â· mobile (Pixel 5)"
+        - generic [ref=e44]: discovers
+        - generic [ref=e46]: specs/ Â· 18 files
+        - generic [ref=e47]: "@smoke / @regression"
+        - generic [ref=e48]: "import { test, expect }"
+        - generic [ref=e49]: imports
+        - generic [ref=e51]: fixtures/server.ts
+        - generic [ref=e52]: "worker-scoped `server` fixture â€” owns the SUT"
+        - generic [ref=e53]: 1 mkdtemp() â†’ JOBRADAR_HOME
+        - generic [ref=e54]: 2 write config.json Â· scorer/IMAP off
+        - generic [ref=e55]: 3 seed.py â†’ jobs.db (+ template copy)
+        - generic [ref=e56]: 4 spawnServer :8800 + workerIndex
+        - generic [ref=e57]: 5 waitForHealth GET /health
+        - generic [ref=e58]: "6 resetState (per test): template â†’ jobs.db"
+        - generic [ref=e59]: "yields { url, token, home }"
+        - generic [ref=e60]: "auth header: X-Jobradar-Token"
+        - generic [ref=e62]: Flask app Â· jobradar
+        - generic [ref=e63]: python -m jobradar serve
+        - generic [ref=e64]: create_app() Â· blueprint bp
+        - generic [ref=e65]: "auth: X-Jobradar-Token"
+        - generic [ref=e66]: templates â†’ data-testid
+        - generic [ref=e68]: jobs.db Â· SQLite
+        - generic [ref=e69]: product schema (core/db.py)
+        - generic [ref=e70]: no write API for vacancies
+        - generic [ref=e71]: spawn
+        - generic [ref=e72]: seed/reset
+        - generic [ref=e73]: reads
+        - generic [ref=e75]: specs drive the running app Â· http :port
+        - generic [ref=e76]: â–¸ Page Objects â€” new FeedPage(page) Â· extends BasePage Â· @step Â· Routes+query Â· getByTestId
+        - generic [ref=e77]: â–¸ Raw locators â€” page.locator('[data-testid="job-card"][data-hash=â€¦]')
+        - generic [ref=e78]: â–¸ API / contract â€” api(JobradarApi) / request Â· asserts 303 Â· 404 Â· 405 Â· 400 Â· 403
+      - generic [ref=e79]:
+        - text: The load-bearing seam is
+        - code [ref=e80]: JOBRADAR_HOME
+        - text: ": tests never patch product code â€” they point one env var at a temp dir, so the app runs its"
+        - emphasis [ref=e81]: own
+        - text: schema and code paths. Isolation is per worker (own port + own DB); per-test reset is a file copy, not a restart.
+    - list [ref=e82]:
+      - listitem [ref=e83]:
+        - text: â†’
+        - generic [ref=e84]:
+          - text: "No"
+          - code [ref=e85]: webServer
+          - text: on purpose.
+        - text: Owning spawn + teardown in the fixture is what lets each worker get an isolated port and a disposable
+        - code [ref=e86]: JOBRADAR_HOME
+        - text: .
+      - listitem [ref=e87]:
+        - text: â†’
+        - generic [ref=e88]:
+          - text: Seeding goes through
+          - code [ref=e89]: db_connect
+          - text: ", not a fake."
+        - code [ref=e90]: seed.py
+        - text: imports the product schema, so the test data is exactly what a real scan would write.
+      - listitem [ref=e91]:
+        - text: â†’
+        - generic [ref=e92]:
+          - text: Selectors are cooperative
+          - code [ref=e93]: data-testid
+          - text: .
+        - text: Templates emit them; the contract specs assert raw HTTP status codes through the
+        - code [ref=e94]: request
+        - text: context.
+  - generic [ref=e95]:
+    - generic [ref=e96]:
+      - generic [ref=e97]: "02"
+      - generic [ref=e98]:
+        - paragraph [ref=e99]: Scan pipeline Â· core/pipeline.py
+        - heading "Five gates, and what each one drops" [level=2] [ref=e100]
+    - paragraph [ref=e101]:
+      - text: The teal spine along the top is what
+      - emphasis [ref=e102]: survives
+      - text: "to Telegram. The information is in the amber arrows: at every gate a record can be dropped â€” but it is still"
+      - generic [ref=e103]:
+        - text: persisted to
+        - code [ref=e104]: jobs.db
+      - text: ", just held out of the run. Nothing silently vanishes; even a dead feed writes a report row."
+    - figure [ref=e105]:
+      - generic [ref=e106]:
+        - text: sources â†’ dedup â†’ L0 â†’ L1 â†’ telegram
+        - generic [ref=e108]: FIG.02
+      - 'img "The scan pipeline flows left to right through five stages: sources collect raw jobs; dedup by sha256 of company and title with a 180-day TTL drops duplicates to run_dups and revives stale rows as new; the L0 filter of regex and salary drops failures as l0_pass zero; L1 LLM scoring with Haiku scores survivors; a threshold of six drops lower scores from Telegram but keeps them in the database; survivors are sent to Telegram. All rows persist to jobs.db, which the Flask feed reads for triage; a heartbeat alerts if no new record arrives in 24 hours." [ref=e110]':
+        - generic [ref=e111]: "the run Â· triggered by cron or the web â€œScanâ€\x9d button (RunLock)"
+        - generic [ref=e113]: stale > 180d â†’ revive as new (re-score)
+        - generic [ref=e115]: sources
+        - generic [ref=e116]: .collect()
+        - generic [ref=e117]: source-agnostic list
+        - generic [ref=e118]: of (report)â†’[job]
+        - generic [ref=e120]: dedup
+        - generic [ref=e121]: job_hash
+        - generic [ref=e122]: sha256(company|title)
+        - generic [ref=e123]: TTL 180 days
+        - generic [ref=e125]: L0 filter
+        - generic [ref=e126]: regex + min_salary
+        - generic [ref=e127]: free Â· deterministic
+        - generic [ref=e128]: non-retroactive
+        - generic [ref=e130]: L1 scoring
+        - generic [ref=e131]: LlmScorer Â· Haiku
+        - generic [ref=e132]: SCORER_SYSTEM + profile
+        - generic [ref=e133]: RUBRIC v2 Â· never recomputed
+        - generic [ref=e135]: telegram
+        - generic [ref=e136]: send()
+        - generic [ref=e137]: ðŸŽ¯ card
+        - generic [ref=e138]: notified_at
+        - generic [ref=e139]: raw jobs
+        - generic [ref=e140]: unique
+        - generic [ref=e141]: L0 pass
+        - generic [ref=e142]: â‰¥ 6
+        - generic [ref=e143]: collectors
+        - generic [ref=e144]: Â· DOU RSS â€” â‰¤ 25 / feed
+        - generic [ref=e145]: Â· IMAP â€” Djinni (enriched)
+        - generic [ref=e146]: + LinkedIn (no desc)
+        - generic [ref=e147]: Â· Djinni RSS â€” ~100
+        - generic [ref=e148]: Â· fixture (tests)
+        - generic [ref=e149]: seen â‰¤ 180d â†’ drop
+        - generic [ref=e150]: run_dups + merge_source
+        - generic [ref=e151]: regex / salary fail
+        - generic [ref=e152]: â†’ stored l0_pass=0
+        - generic [ref=e153]: score < 6 â†’ kept in DB,
+        - generic [ref=e154]: not sent (notify_min_score)
+        - generic [ref=e155]: notified_at
+        - generic [ref=e157]: jobs.db
+        - generic [ref=e158]: SQLite Â· product schema â€” every row lands here (jobs Â· runs Â· run_dups Â· meta)
+        - generic [ref=e160]: Flask /feed Â· web triage
+        - generic [ref=e161]: reads l0_pass=1 Â· status tabs
+        - generic [ref=e162]: new â†’ interested / applied / skipped
+        - generic [ref=e164]: heartbeat Â· end of run
+        - generic [ref=e165]: no new record 24h â†’
+        - generic [ref=e166]: "ðŸ”• Telegram â€œsilenceâ€\x9d alert"
+      - generic [ref=e167]:
+        - text: "The DOU cap is not a boolean â€œcappedâ€\x9d flag â€” each feed records a"
+        - code [ref=e168]: window_hours
+        - text: span into
+        - code [ref=e169]: runs.feeds
+        - text: ; a window narrower than the run interval means rows were silently lost, and that shows on
+        - code [ref=e170]: /runs
+        - text: . LinkedIn emails carry no description, so the scorer is told to cap them at 6.
+    - list [ref=e171]:
+      - listitem [ref=e172]:
+        - text: â†’ Dropped â‰ deleted. Dedup drops, L0 failures, and below-threshold scores all stay in
+        - code [ref=e173]: jobs.db
+        - text: ; the feed just hides them by default (
+        - code [ref=e174]: l0_pass=1
+        - text: ).
+      - listitem [ref=e175]:
+        - text: â†’ Revive after 180d is the one legit re-score. A stale hash is rewritten via
+        - code [ref=e176]: INSERT OR REPLACE
+        - text: ", resetting"
+        - code [ref=e177]: status
+        - text: to
+        - code [ref=e178]: new
+        - text: and wiping the old score â€” everywhere else, scores are frozen with their rubric tag.
+      - listitem [ref=e179]:
+        - text: â†’ L1 fails safe. Any scorer exception â†’
+        - code [ref=e180]: score=None
+        - text: ; with no scorer configured (
+        - code [ref=e181]: NullScorer
+        - text: ), every L0 survivor is notified.
+  - generic [ref=e182]:
+    - generic [ref=e183]:
+      - generic [ref=e184]: "03"
+      - generic [ref=e185]:
+        - paragraph [ref=e186]: Vacancy status Â· two linked machines
+        - heading "Triage is free-form; hiring is a nested sub-machine" [level=2] [ref=e187]
+    - paragraph [ref=e188]:
+      - text: A vacancy carries two status fields.
+      - code [ref=e189]: status
+      - text: "is the triage lifecycle: it starts at"
+      - code [ref=e190]: new
+      - text: and the feed buttons let you set
+      - emphasis [ref=e191]: any
+      - text: of the four freely.
+      - code [ref=e192]: archived
+      - text: is reachable only from the hiring page and is hidden from every feed tab.
+      - code [ref=e193]: hiring_status
+      - text: is a second machine that only has meaning once
+      - code [ref=e194]: status = applied
+      - text: .
+    - figure [ref=e195]:
+      - generic [ref=e196]:
+        - text: status Â· hiring_status
+        - generic [ref=e198]: FIG.03
+      - img "A vacancy's status state machine. A scan inserts a vacancy as new. Within triage, new, interested, applied and skipped are mutually reachable via the POST /status card buttons; the common path is new to interested to applied, with skipped as a side exit. From applied, the hiring page can archive (which also sets hiring_status to finish) and restore back to applied; archived is hidden from all feed tabs. A dedup reopen after the 180-day TTL resets any state back to new and wipes status_at and hiring history. The hiring_status sub-machine â€” waiting_hr, pre_screen, tech_interview, finish â€” applies only while status is applied and allows free jumps." [ref=e200]:
+        - generic [ref=e202]: INSERT (scan)
+        - generic [ref=e204]: triage Â· POST /status Â· any â†” any (set-any-status)
+        - generic [ref=e206]: new
+        - generic [ref=e207]: initial Â· default tab
+        - generic [ref=e209]: interested
+        - generic [ref=e210]: cover-letter action
+        - generic [ref=e212]: applied
+        - generic [ref=e213]: on /hiring Â· calendar
+        - generic [ref=e215]: skipped
+        - generic [ref=e216]: reject bucket
+        - generic [ref=e217]: common path
+        - generic [ref=e219]: skip (from any)
+        - generic [ref=e222]: archived
+        - generic [ref=e223]: hidden from feed
+        - generic [ref=e224]: terminal Â· calendar
+        - generic [ref=e225]: archive=1
+        - generic [ref=e226]: restore=1
+        - generic [ref=e228]: any state â€” dedup reopen > 180d TTL â†’
+        - generic [ref=e229]: reset to new Â· wipes status_at + hiring history
+        - generic [ref=e231]: "sub-states of â€œappliedâ€\x9d"
+        - generic [ref=e233]: hiring_status â€” only while status = applied Â· POST /hiring go=<stage>
+        - generic [ref=e234]: free jumps between stages
+        - generic [ref=e236]: waiting_hr
+        - generic [ref=e237]: start ('')
+        - generic [ref=e239]: pre_screen
+        - generic [ref=e241]: tech_interview
+        - generic [ref=e243]: finish
+        - generic [ref=e246]: archive=1 â‡’ finish
+      - generic [ref=e247]:
+        - text: The happy path (
+        - code [ref=e248]: new â†’ interested â†’ applied â†’ finish â†’ archived
+        - text: ) is a convention, not a constraint â€” the
+        - code [ref=e249]: /status
+        - text: buttons set any triage value directly.
+        - code [ref=e250]: rejected
+        - text: is a legacy value migrated to
+        - code [ref=e251]: skipped
+        - text: . Both archive and restore deliberately leave
+        - code [ref=e252]: status_at
+        - text: untouched so the original application date survives in the activity calendar.
+    - list [ref=e253]:
+      - listitem [ref=e254]:
+        - text: â†’
+        - generic [ref=e255]:
+          - code [ref=e256]: archived
+          - text: is the only near-terminal state.
+        - text: It is excluded from every feed tab â€” even
+        - code [ref=e257]: all
+        - text: â€” and reachable only via
+        - code [ref=e258]: /hiring
+        - text: archive / restore, never a feed button.
+      - listitem [ref=e259]:
+        - text: â†’ The reopen edge is destructive. A post-TTL dedup rewrites the whole row, so any state falls back to
+        - code [ref=e260]: new
+        - text: and the hiring history is gone â€” a genuinely reopened role starts clean.
+      - listitem [ref=e261]:
+        - text: â†’ Two machines, one gate.
+        - code [ref=e262]: hiring_status
+        - text: only means anything while
+        - code [ref=e263]: status = applied
+        - text: ; archiving from
+        - code [ref=e264]: finish
+        - text: snaps it shut and moves
+        - code [ref=e265]: status
+        - text: to
+        - code [ref=e266]: archived
+        - text: .
+  - contentinfo [ref=e267]: Portfolio artifact Â· schematics drawn from the jobradar source (core/, web/) and jobradar-e2e/, 2026-09-01. Structure, not styling â€” verify against the code before relying on a detail.

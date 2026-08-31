@@ -1,0 +1,311 @@
+// Profile: edit form, roles, skills, highlighted CV, "?" tooltip.
+
+/* Full .wrap width, like the rest of the pages — not narrower. */
+.profile h2 {
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  margin: 1.4rem 0 0.5rem;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.profile h2 .dimn {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.profile .hint {
+  color: var(--dim);
+  font-size: 0.76rem;
+  margin: 0 0 0.5rem;
+}
+.profile textarea,
+.profile input[type="text"],
+.profile input[type="password"] {
+  font: inherit;
+  font-size: 0.82rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 0;
+}
+/* LLM access: labelled fields, caption always above, all inputs one width. */
+.llmgrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-width: 30rem;
+}
+.profile .pfield {
+  display: block;
+  margin: 0;
+}
+.profile .plabel {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 0.25rem;
+}
+.profile .pfield input,
+.profile .pfield select {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+/* Resizable both ways — so a long CV isn't stuck in a narrow box. */
+.profile textarea {
+  resize: both;
+  line-height: 1.5;
+  min-height: 6rem;
+}
+.profile textarea[name="cv_text"] {
+  min-height: 12rem;
+}
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.role {
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.role input {
+  margin: 0;
+}
+.role.on {
+  border-color: var(--petrol);
+  background: var(--petrol);
+  color: #fff;
+}
+.skillgroups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.skillgroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+.skillgroup .gname {
+  flex: 0 0 8rem;
+  color: var(--dim);
+  font-size: 0.72rem;
+  text-align: right;
+  padding-right: 0.4rem;
+}
+@media (max-width: 620px) {
+  .skillgroup .gname {
+    flex-basis: 100%;
+    text-align: left;
+  }
+}
+/* CV with highlighted skills. The checkbox is hidden — you click the word
+   in the text itself, and :has() dims every mention of that word at once. */
+.cvbox {
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 0.7rem 0.9rem;
+  height: 16rem;
+  overflow: auto;
+  resize: vertical;
+}
+.cvtext {
+  font-size: 0.82rem;
+  line-height: 1.85;
+  white-space: normal;
+}
+.cvtag {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+  padding: 0 0.05rem;
+  user-select: none;
+}
+.cvtag:hover {
+  background: var(--accent);
+  color: #fff;
+  border-bottom-color: transparent;
+}
+.skcb {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.cvbox:focus-within .cvtag:focus {
+  outline: 2px solid var(--petrol);
+}
+
+.pickskill,
+.tagpick {
+  border: 1px solid var(--accent);
+  color: var(--ink);
+  background: var(--card);
+  padding: 0.05rem 0.4rem;
+  font-size: 0.74rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.pickskill input,
+.tagpick input {
+  margin: 0;
+}
+/* An unchecked box dims the chip — showing the skill is excluded from the profile. */
+.pickskill:has(input:not(:checked)) {
+  border-color: var(--line);
+  color: var(--dim);
+  text-decoration: line-through;
+}
+.tagpick:has(input:checked) {
+  background: var(--accent);
+  color: #fff;
+}
+.prow {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.7rem;
+  flex-wrap: wrap;
+}
+.prow.save {
+  margin-top: 1.6rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+.profile button,
+.sect button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  border: 1px solid var(--petrol);
+  background: var(--card);
+  color: var(--petrol);
+  border-radius: 0;
+  letter-spacing: 0.06em;
+}
+.profile button.primary,
+.sect button.primary {
+  background: var(--petrol);
+  color: #fff;
+}
+.profile button.ghost {
+  border-color: var(--line);
+  color: var(--dim);
+}
+.profile button:hover,
+.sect button:hover {
+  border-color: var(--petrol);
+}
+.profile button.primary:hover {
+  background: #0b3937;
+}
+.saved {
+  border: 1px solid var(--strong);
+  color: var(--strong);
+  background: var(--card);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+}
+/* Explanations hidden behind "?" — a tooltip on hover/focus, no JS. */
+.q {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--dim);
+  border-radius: 50%;
+  font-size: 10px;
+  color: var(--dim);
+  cursor: help;
+  position: relative;
+  margin-left: 0.4rem;
+  text-transform: none;
+  letter-spacing: normal;
+  vertical-align: middle;
+}
+.q:hover,
+.q:focus {
+  border-color: var(--petrol);
+  color: var(--petrol);
+  outline: none;
+}
+.q:hover::after,
+.q:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  top: 140%;
+  z-index: 60;
+  width: 19rem;
+  max-width: 70vw;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 400;
+  padding: 0.5rem 0.65rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.profile .editlink {
+  margin-left: auto;
+  font-size: 0.78rem;
+}
+.profile .pmeta {
+  font-size: 0.92rem;
+  margin: 0.2rem 0 0;
+}
+.profile .muted {
+  color: var(--dim);
+  font-size: 0.82rem;
+}
+.profile .notes {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: normal;
+}
+
+/* Provider dropdown in LLM access — visually matches the text inputs (width and
+   spacing come from .pfield / .llmgrid above). */
+.profile .pfield select {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 0;
+}
+/* Callout when no API key is set: the LLM features are off until one is added. */
+.profile .pcallout {
+  margin: 0 0 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--worth);
+  border-left: 3px solid var(--worth);
+  background: var(--card);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}

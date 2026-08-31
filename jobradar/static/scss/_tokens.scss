@@ -1,0 +1,57 @@
+// Palette tokens (SCSS variables → CSS custom properties) + base reset.
+// One token set feeds both SCSS calculations and runtime themes via var().
+
+$paper: #edefee;
+$card: #ffffff;
+$ink: #14201c;
+$dim: #5e6d66;
+$line: #cbd3d0;
+$petrol: #0f4c4a;
+$strong: #0f7a5a;
+$worth: #a8710a;
+$stretch: #8a5a7a;
+$skip: #78857f;
+$unscored: #9aa6a1;
+$alert: #a32f2f;
+// Second accent — ochre/amber, complementary to petrol (not terracotta: there
+// red dominated and read as an error). The green channel almost catches up to
+// red (148:96:17) → mustard, further from --alert. The dark shade is deliberate:
+// a lighter amber fails contrast. 4.61 on background / 5.33 on card — AA.
+$accent: #946011;
+
+:root {
+  --paper: #{$paper};
+  --card: #{$card};
+  --ink: #{$ink};
+  --dim: #{$dim};
+  --line: #{$line};
+  --petrol: #{$petrol};
+  --strong: #{$strong};
+  --worth: #{$worth};
+  --stretch: #{$stretch};
+  --skip: #{$skip};
+  --unscored: #{$unscored};
+  --alert: #{$alert};
+  --accent: #{$accent};
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: 0 0 4rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+a {
+  color: var(--petrol);
+}
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}

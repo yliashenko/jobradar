@@ -1,0 +1,118 @@
+// Company page: header with aggregated info + groups of its vacancies.
+
+.cohead {
+  margin-bottom: 1.2rem;
+}
+.cohead .back {
+  font-size: 0.76rem;
+  color: var(--dim);
+  text-decoration: none;
+}
+.cohead .back:hover {
+  color: var(--accent);
+}
+.coname {
+  font-size: 1.5rem;
+  margin: 0.4rem 0 0.1rem;
+  color: var(--ink);
+}
+.costat {
+  color: var(--dim);
+  font-size: 0.8rem;
+  margin: 0 0 0.8rem;
+}
+.coinfo {
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 0.6rem 0.9rem;
+}
+.corow {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.6rem;
+  padding: 0.32rem 0;
+  align-items: start;
+}
+.corow + .corow {
+  border-top: 1px solid var(--paper);
+}
+.colabel {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding-top: 0.15rem;
+}
+.coval {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.coval .xchip {
+  font-size: 0.72rem;
+  color: var(--petrol);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 0.05rem 0.45rem;
+}
+.coval.cotags {
+  gap: 0.25rem;
+}
+.colist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+@media (max-width: 620px) {
+  .corow {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
+
+/* A group of one company's vacancies. */
+.cogroup {
+  border-left: 3px solid var(--accent);
+  margin: 0.9rem 0;
+  background: var(--paper);
+}
+.cogroup > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9rem;
+}
+.cogroup > summary::-webkit-details-marker {
+  display: none;
+}
+.cogroup > summary:hover {
+  background: var(--line);
+}
+.cogroup-head .co {
+  font-weight: 700;
+  color: var(--ink);
+}
+.cogroup-head .cocount {
+  font-size: 0.74rem;
+  color: var(--dim);
+}
+.cogroup-head .caret {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 0.8rem;
+}
+.cogroup[open] > summary .caret {
+  transform: rotate(180deg);
+}
+.cogroup-body {
+  padding: 0 0.5rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cogroup-body .job {
+  background: var(--card);
+}

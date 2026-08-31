@@ -1,0 +1,5 @@
+{
+  // Better Jinja: highlights HTML and Jinja ({{ }} / {% %}) together in the
+  // templates. VSCode offers to install it when the project is opened.
+  "recommendations": ["samuelcolvin.jinjahtml"]
+}

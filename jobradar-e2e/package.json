@@ -1,0 +1,18 @@
+{
+  "name": "jobradar-e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for the jobradar webui, built with Playwright.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:chromium": "playwright test --project=chromium",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.0.0"
+  }
+}

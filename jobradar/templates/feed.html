@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% import "partials/_job_card.html" as card with context %}
+
+{% block head_extra %}{% if busy %}<meta http-equiv="refresh" content="4">{% endif %}{% endblock %}
+{% block runbox %}{{ ui.runbox(runbox) }}{% endblock %}
+{% block filters %}{{ ui.filters(filters, params, pick_tags, pick_companies) }}{% endblock %}
+
+{% block content %}
+{% set at = ui.active_tags(params) %}
+{% set ac = ui.active_companies(params) %}
+{{ ui.status_tabs(tabs) }}
+{% if at.strip() or ac.strip() %}<div class="listbar">{{ at }}{{ ac }}</div>{% endif %}
+{% if has_jobs %}
+<div class="feed" data-testid="feed">
+  {% for item in groups %}
+  {% if item.kind == 'group' %}{{ card.company_group(item.company, item.members, threshold, params, runbox.back, also) }}{% else %}{{ card.job_card(item.row, threshold, params, runbox.back, also_on_links=also.get(item.row['hash'])) }}{% endif %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty"><b>{{ empty.title }}</b>{{ empty.body }}</div>
+{% endif %}
+{% if not llm_ready %}{{ ui.llm_gate(params.get('token', '')) }}{% endif %}
+{% endblock %}

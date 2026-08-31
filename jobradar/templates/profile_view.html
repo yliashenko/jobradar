@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% block content %}
+<div class="profile">
+  {% if saved %}<p class="saved">Profile saved.</p>{% endif %}
+  <div class="prow"><h2 style="margin:0">Profile</h2><a class="editlink" href="{{ profile_link(true, token) }}">Edit</a></div>
+
+  <h2>Specialization {{ ui.tooltip('The role we search for: it defines the broad scanner feeds and the slice for stats.') }}</h2>
+  <p class="pmeta"><b class="co">{{ role_label }}</b></p>
+
+  <h2>Stack {{ ui.tooltip('Mastery technologies the scanner pulls deeper on — a separate window of vacancies for each.') }}</h2>
+  <p class="pmeta">{% if stack %}{{ stack }}{% else %}<span class="muted">not set</span>{% endif %}</p>
+
+  <h2>Seniority {{ ui.tooltip('Your level; used in the fit score.') }}</h2>
+  <p class="pmeta">{% if seniority %}{{ seniority }}{% else %}<span class="muted">not set</span>{% endif %}</p>
+
+  <h2>Skills {{ ui.tooltip('Your skills from the CV. Select a few — it shows vacancies that have all the selected ones.') }}</h2>
+  {% if skills %}
+  <form method="get" action="/">
+    <input type="hidden" name="status" value="all">
+    {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
+    <div class="skillgroup">{% for term in skills %}<label class="tagpick"><input type="checkbox" name="tech" value="{{ term }}"> {{ term }}</label>{% endfor %}</div>
+    <div class="prow"><button class="primary">Show vacancies</button></div>
+  </form>
+  {% else %}
+  <p class="pmeta"><span class="muted">not detected yet</span> — <a href="{{ profile_link(true, token) }}">add a CV</a></p>
+  {% endif %}
+
+  <h2>Added skills {{ ui.tooltip('Skills you added by hand, not read from the CV — the assumed-standard kind few people list (Scrum, HTTP). They feed the scorer and stats.') }}</h2>
+  <p class="pmeta">{% if extra_skills %}{{ extra_skills }}{% else %}<span class="muted">not set</span>{% endif %}</p>
+
+  <h2>Not for me {{ ui.tooltip('Skills you do NOT position yourself by: they drop out of the stats, and vacancies with them in the title get filtered out, like Junior.') }}</h2>
+  <p class="pmeta">{% if exclude %}{{ exclude }}{% else %}<span class="muted">not set</span>{% endif %}</p>
+
+  <h2>Boundaries & caveats {{ ui.tooltip('The scorer sees this, not the filter — nuances the skills list hides.') }}</h2>
+  <p class="notes">{% if notes_html %}{{ notes_html }}{% else %}<span class="muted">not set</span>{% endif %}</p>
+
+  <h2>LLM access {{ ui.tooltip('Your own API key powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM). Provider picks Anthropic or an OpenAI-compatible endpoint. The model below is the cover-letter model; scoring keeps its own in config. Set them in Edit.') }}</h2>
+  {% if not api_key_set %}<p class="pcallout">No API key set — <b>vacancy scoring</b> and <b>cover-letter generation</b> are unavailable. <a href="{{ profile_link(true, token) }}">Add a key</a> to enable them. The rest of the radar (collection, L0 filtering, triage) works without it.</p>{% endif %}
+  <p class="pmeta">{% if api_key_set %}<b class="co">key set</b>{% else %}<span class="muted">no key</span>{% endif %} · provider: {{ llm_provider }}{% if llm_base_url %} · {{ llm_base_url }}{% endif %} · cover-letter model: {% if llm_model %}{{ llm_model }}{% else %}<span class="muted">default (claude-sonnet-5)</span>{% endif %}</p>
+</div>
+{% endblock %}

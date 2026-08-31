@@ -1,0 +1,36 @@
+# Secrets: mailbox password and API key
+config.json
+
+# Personal: CV, skills, candidate boundaries (ship profile.example.md instead)
+profile.json
+profile.md
+# Source of facts for cover-letter generation (client names, metrics) — never in git
+career-facts.md
+
+# Data: job-search history
+jobs.db
+jobs.db-journal
+jobs.db-wal
+
+# Logs and runtime
+*.log
+.lock/
+__pycache__/
+*.pyc
+
+# Local environment
+.DS_Store
+.claude/settings.local.json
+
+# Dev layer (ADR-0004): the venv lives only on the working machine
+.venv/
+
+# Dev-tool caches and reports (ruff / mypy / pytest / coverage)
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Archive bundles: a build, not source. Source is git tags (§5).
+*.zip

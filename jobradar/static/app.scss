@@ -1,0 +1,26 @@
+// jobradar — web triage styles. Entry point; pulls the scss/ partials together
+// and compiles to app.css (make css).
+//
+// Direction: a lab triage form, not a dashboard. Everything monospaced — this is
+// telemetry; mono keeps the numbers in a column without external fonts. The
+// signature is the shared 0–10 scale: every row marks its score on the same rail.
+//
+// @import order is the cascade order: tokens first, global overrides (focus,
+// narrow screens) last. profile before modal is deliberate — the `.modal-box
+// textarea` override must land after `.profile textarea` (same specificity,
+// order decides); modal before calendar so `.calpop-box` overrides the base
+// `.modal-box`. The rest of the partials are context-scoped.
+
+@import "scss/tokens";
+@import "scss/shell";
+@import "scss/nav";
+@import "scss/tags";
+@import "scss/profile";
+@import "scss/modal";
+@import "scss/card";
+@import "scss/hiring";
+@import "scss/calendar";
+@import "scss/company";
+@import "scss/stats";
+@import "scss/runs";
+@import "scss/responsive";

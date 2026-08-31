@@ -1,0 +1,16 @@
+# Dev layer: installed into a venv on the working machine.
+
+# Tests and code quality (they check the Python runtime in jobradar/).
+pytest>=8
+ruff>=0.6
+mypy>=1.11
+coverage>=7
+
+# SCSS → static/app.css compilation (make css). Dev only.
+libsass>=0.22
+
+# E2E lives in a separate Node project (jobradar-e2e/, @playwright/test).
+# pytest-playwright is kept in case of Python e2e; if it's not needed — we'll drop it.
+pytest-playwright>=0.5
+# The Playwright browser is installed via a command, not pip:
+#   playwright install chromium
