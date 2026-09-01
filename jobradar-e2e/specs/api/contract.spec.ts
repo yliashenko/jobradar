@@ -1,12 +1,7 @@
 import { test, expect } from '../../fixtures/server';
 import { HttpStatus } from '../../utils/http';
 
-// API / contract layer (request, no browser). The overlay found that only the
-// 400 (invalid status) and 405 (wrong method) cases on POST /status were
-// asserted — never the 303 a *valid* status returns, nor that the write lands.
-
-// PW-FEED-5: assertion is on the raw response (status + Location) and a
-// read-back of the feed body over the wire.
+// Contract layer (request, no browser): assertions on the raw HTTP response.
 test.describe('POST /status redirect contract', () => {
   test('a valid status returns 303 with a Location @regression', async ({ api }) => {
     const res = await api.setStatus('v1', 'interested');
@@ -22,9 +17,7 @@ test.describe('POST /status redirect contract', () => {
   });
 });
 
-// PW-PRO-4 — save contract. Assertion on the raw response (303 + Location),
-// not the rendered page. resetState deletes profile.json before each test, so a
-// save here is isolated.
+// resetState deletes profile.json before each test, so the save is isolated.
 test.describe('POST /profile redirect contract', () => {
   test('save returns 303 to the saved view @regression', async ({ request }) => {
     const res = await request.post('/profile', { form: { action: 'save' }, maxRedirects: 0 });

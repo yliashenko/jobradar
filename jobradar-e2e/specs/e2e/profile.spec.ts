@@ -51,7 +51,6 @@ test.describe('Profile', () => {
     await expect(profile.savedNotes()).toContainText('second note');
   });
 
-  // PW-PRO-3 — seniority is detected from the CV, not typed by hand.
   test('detecting skills fills in the seniority from the CV @regression', async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.open();
@@ -61,31 +60,27 @@ test.describe('Profile', () => {
     await expect(profile.seniorityInput()).toHaveValue('Senior');
   });
 
-  // PW-PRO-8 — a lowercase mention maps to the canonical skill spelling.
   test('a lowercase skill in the CV maps to its canonical spelling @regression', async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.open();
     await profile.openCvModal();
     await profile.cvInput().fill('experience with playwright and pytest');
     await profile.detectSkills();
-    await expect(profile.skillCheckbox('Playwright')).toBeChecked(); // "playwright" → "Playwright"
+    await expect(profile.skillCheckbox('Playwright')).toBeChecked();
   });
 
-  // PW-PRO-2 — "Detect skills" is a preview: it shows skills but persists nothing.
   test('detecting skills previews without saving the profile @regression', async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.open();
     await profile.openCvModal();
     await profile.cvInput().fill('Playwright, pytest');
     await profile.detectSkills();
-    await expect(profile.skillCheckbox('Playwright')).toBeChecked(); // shown in the preview
+    await expect(profile.skillCheckbox('Playwright')).toBeChecked();
 
-    await profile.open(); // fresh visit — nothing was saved, so no detected skills
+    await profile.open(); // fresh visit — nothing was saved
     await expect(profile.skillCheckbox('Playwright')).toHaveCount(0);
   });
 
-  // PW-PRO-9 — an "extra" skill is saved even though it is not in the CV (unlike
-  // detected skills, extra skills are not CV-validated).
   test('an extra skill is saved even though it is not in the CV @regression', async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.open();
@@ -95,7 +90,6 @@ test.describe('Profile', () => {
     await expect(page.locator('input[name="extra"]')).toHaveValue('Scrum');
   });
 
-  // PW-PRO-14 — the selected role persists across a save.
   test('the selected role persists across a save @regression', async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.open();
@@ -107,7 +101,6 @@ test.describe('Profile', () => {
     await expect(page.locator(`input[name="role"][value="${value}"]`)).toBeChecked();
   });
 
-  // PW-PRO-15 — the own-account LLM config (provider + model) is saved in the profile.
   test('the LLM config is saved in the profile @regression', async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.open();

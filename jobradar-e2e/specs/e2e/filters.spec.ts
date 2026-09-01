@@ -1,7 +1,6 @@
 import { test, expect } from '../../fixtures/server';
 import { FeedPage } from '../../pages/feed.page';
-
-const card = (h: string) => `[data-testid="job-card"][data-hash="${h}"]`;
+import { sel } from '../../utils/selectors';
 
 test.describe('Vacancy filters', () => {
   test('by status keeps only that status @regression', async ({ page }) => {
@@ -45,13 +44,13 @@ test.describe('Vacancy filters', () => {
 test.describe('period filter', () => {
   test('the week filter keeps recent vacancies and drops older ones @regression', async ({ page }) => {
     await page.goto('/?days=7');
-    await expect(page.locator(card('v9'))).toBeVisible();
-    await expect(page.locator(card('v11'))).toHaveCount(0);
+    await expect(page.locator(sel.cardOf('v9'))).toBeVisible();
+    await expect(page.locator(sel.cardOf('v11'))).toHaveCount(0);
   });
 
   test('the two-weeks filter keeps a 10-day-old vacancy @regression', async ({ page }) => {
     await page.goto('/?days=14');
-    await expect(page.locator(card('v10'))).toBeVisible();
-    await expect(page.locator(card('v11'))).toHaveCount(0);
+    await expect(page.locator(sel.cardOf('v10'))).toBeVisible();
+    await expect(page.locator(sel.cardOf('v11'))).toHaveCount(0);
   });
 });
