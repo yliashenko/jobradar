@@ -1,7 +1,6 @@
 import { test, expect } from '../../fixtures/server';
 import { StatsPage } from '../../pages/stats.page';
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { writeProfile } from '../../fixtures/overlays';
 
 // Market coverage = how many of the top-demand skills the profile owns
 test.describe('Stats — profile coverage', () => {
@@ -12,7 +11,7 @@ test.describe('Stats — profile coverage', () => {
   });
 
   test('adding a demanded skill as an extra raises coverage @regression', async ({ page, server }) => {
-    await writeFile(join(server.home, 'profile.json'), JSON.stringify({ extra_skills: ['Playwright'] }));
+    await writeProfile(server.home, { extra_skills: ['Playwright'] });
     await page.goto('/stats');
     const covered = parseInt(await page.locator('.big').first().innerText(), 10);
     expect(covered).toBeGreaterThan(0);

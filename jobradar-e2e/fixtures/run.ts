@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { writeProfile } from './overlays';
 
 export interface FixtureJob {
   source?: string;
@@ -45,8 +46,5 @@ export async function configureRun(
   // The scorer needs a profile to score against; without one it errors and leaves
   // the row unscored (and score-None would reach the notify line). resetState
   // deletes profile.json before each test, so this is isolated.
-  await writeFile(
-    join(home, 'profile.json'),
-    JSON.stringify({ cv_text: 'QA Automation Engineer — Playwright, pytest.', notes: 'QA.' }),
-  );
+  await writeProfile(home, { cv_text: 'QA Automation Engineer — Playwright, pytest.', notes: 'QA.' });
 }

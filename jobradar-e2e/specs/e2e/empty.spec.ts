@@ -1,12 +1,11 @@
 import { test, expect } from '../../fixtures/server';
 import { HttpStatus } from '../../utils/http';
+import { sel } from '../../utils/selectors';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
-// Empty & first-run state. Before the first scan there is no jobs.db; get_db()
-// returns None when the file is absent (existence check before connect), so every
-// route renders the empty-state instead of erroring. We reproduce that by
-// removing the seeded DB — resetState restores it for the next test.
+// No jobs.db → get_db() returns None → every route renders the empty-state.
+// We reproduce it by removing the seeded DB; resetState restores it next test.
 test.describe('empty state (no database yet)', () => {
   test('every page returns 200 with no DB seeded @regression', async ({ request, server }) => {
     await rm(join(server.home, 'jobs.db'), { force: true });
@@ -20,6 +19,6 @@ test.describe('empty state (no database yet)', () => {
     await rm(join(server.home, 'jobs.db'), { force: true });
     await page.goto('/');
     await expect(page.locator('.empty')).toContainText('No scan yet');
-    await expect(page.locator('form.runbox button')).toBeVisible();
+    await expect(page.locator(`${sel.runbox} button`)).toBeVisible();
   });
 });

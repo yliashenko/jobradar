@@ -1,6 +1,7 @@
 import { type Locator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { Routes } from '../utils/routes';
+import { sel } from '../utils/selectors';
 
 export class TagsPage extends BasePage {
   async open(): Promise<void> {
@@ -8,10 +9,10 @@ export class TagsPage extends BasePage {
   }
 
   tags(): Locator {
-    return this.page.getByTestId('tag');
+    return this.page.locator(sel.tagAny);
   }
 
   tag(term: string): Locator {
-    return this.page.locator(`[data-testid="tag"][data-tag="${term}"]`);
+    return this.page.locator(sel.tag(term));
   }
 }

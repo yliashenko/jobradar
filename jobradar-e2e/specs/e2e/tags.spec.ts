@@ -1,11 +1,8 @@
 import { test, expect } from '../../fixtures/server';
 import { FeedPage } from '../../pages/feed.page';
 import { TagsPage } from '../../pages/tags.page';
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-
-const card = '[data-testid="job-card"]';
-const pwTag = '[data-testid="tag"][data-tag="Playwright"]';
+import { writeProfile } from '../../fixtures/overlays';
+import { sel } from '../../utils/selectors';
 
 test.describe('Tags cloud', () => {
   test('lists the seeded technologies @smoke', async ({ page }) => {
@@ -49,30 +46,25 @@ test.describe('Tag filter', () => {
   // A tag cycles include → exclude → off; each transition is arranged via URL.
   test('clicking a tag adds it as an include filter @regression', async ({ page }) => {
     await page.goto('/');
-    await page.locator(pwTag).first().click();
+    await page.locator(sel.tag('Playwright')).first().click();
     expect(page.url()).toContain('tech=Playwright');
-    await expect(page.locator(`${card}[data-hash="v1"]`)).toBeVisible();
-    await expect(page.locator(`${card}[data-hash="v2"]`)).toHaveCount(0);
+    await expect(page.locator(sel.cardOf('v1'))).toBeVisible();
+    await expect(page.locator(sel.cardOf('v2'))).toHaveCount(0);
   });
 
   test('clicking an already-included tag flips it to exclude @regression', async ({ page }) => {
     await page.goto('/?status=all&tech=Playwright');
-    await page.locator(pwTag).first().click();
+    await page.locator(sel.tag('Playwright')).first().click();
     expect(page.url()).toContain('notech=Playwright');
-    await expect(page.locator(`${card}[data-hash="v1"]`)).toHaveCount(0);
+    await expect(page.locator(sel.cardOf('v1'))).toHaveCount(0);
   });
 });
 
 // Profile "not for me" (exclude) mutes a skill two ways: out of the tags cloud,
-// and a vacancy whose TITLE carries it is hidden from the feed. Same catalog DB,
-// different profile.json (an overlay); resetState deletes it before each test.
-async function excludeSkill(home: string, term: string) {
-  await writeFile(join(home, 'profile.json'), JSON.stringify({ exclude: [term] }));
-}
-
+// and a vacancy whose TITLE carries it is hidden from the feed.
 test.describe('anti-goal (not for me) muting', () => {
   test('an excluded skill is muted from the tags cloud @regression', async ({ page, server }) => {
-    await excludeSkill(server.home, 'JavaScript');
+    await writeProfile(server.home, { exclude: ['JavaScript'] });
     const tags = new TagsPage(page);
     await tags.open();
     await expect(tags.tag('JavaScript')).toHaveCount(0);
@@ -80,9 +72,9 @@ test.describe('anti-goal (not for me) muting', () => {
   });
 
   test('a vacancy whose title carries an excluded skill is hidden from the feed @regression', async ({ page, server }) => {
-    await excludeSkill(server.home, 'JavaScript');
+    await writeProfile(server.home, { exclude: ['JavaScript'] });
     await page.goto('/');
-    await expect(page.locator(`${card}[data-hash="v3"]`)).toHaveCount(0); // title "…(JavaScript)"
-    await expect(page.locator(`${card}[data-hash="v1"]`)).toBeVisible();
+    await expect(page.locator(sel.cardOf('v3'))).toHaveCount(0); // title "…(JavaScript)"
+    await expect(page.locator(sel.cardOf('v1'))).toBeVisible();
   });
 });
