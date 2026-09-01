@@ -2,6 +2,12 @@
 
 > PW-ID → spec file → status. Updated as batches land. ✅ done · 🟡 partial · ❌ not yet.
 > Suite state: **87 tests green** (45 baseline + 42 new/migrated), 174 across chromium + mobile.
+>
+> **Layout:** specs split into **`specs/api/`** (pure `request` contract: `contract`,
+> `health`, `pages`) and **`specs/e2e/`** (everything else). Merged by feature —
+> `feed-more`+`status-change`+`archived` → `feed.spec`; `period` → `filters.spec`;
+> `tag-filter` + the tag-cycle tests → `tags.spec`. Rows below name the file by its
+> feature; look for it under `api/` or `e2e/`.
 
 ## Epic 6 — Feed & triage
 
