@@ -3,7 +3,8 @@ icons, and the single inline popup script. Page-specific data lives with its vie
 """
 
 # Triage statuses: DB key → human label. Order drives the tabs and buttons.
-# 'archived' has a label (for lookups) but no feed tab — it lives only on /hiring.
+# 'archived' has a label (for lookups) but no feed tab of its own — it lives on
+# the Applied tab, behind its "Show archived" toggle.
 STATUS_LABELS = {
     "new": "new",
     "interested": "interested",
@@ -14,7 +15,7 @@ STATUS_LABELS = {
 STATUS_ORDER = ("new", "interested", "applied", "skipped")
 
 # Hiring pipeline for an applied vacancy: DB key → human label. Order drives the
-# stage buttons on the /hiring page. Per-stage notes are kept as JSON keyed by
+# stage buttons on the Applied tab. Per-stage notes are kept as JSON keyed by
 # these same DB keys (jobs.hiring_notes).
 HIRING_LABELS = {
     "waiting_hr": "Waiting for HR response",

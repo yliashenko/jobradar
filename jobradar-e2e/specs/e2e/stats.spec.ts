@@ -19,20 +19,20 @@ test.describe('Stats — profile coverage', () => {
 });
 
 test.describe('Stats', () => {
-  test('shows the vacancies-by-source section @smoke', async ({ page }) => {
-    const stats = new StatsPage(page);
+  let stats: StatsPage;
+  test.beforeEach(async ({ page }) => { stats = new StatsPage(page); });
+
+  test('shows the vacancies-by-source section @smoke', async () => {
     await stats.open();
     await expect(stats.section('Vacancies by source')).toBeVisible();
   });
 
-  test('shows the Djinni comparison section @regression', async ({ page }) => {
-    const stats = new StatsPage(page);
+  test('shows the Djinni comparison section @regression', async () => {
     await stats.open();
     await expect(stats.section('Djinni: what DOU does not have')).toBeVisible();
   });
 
-  test('renders stat rows @regression', async ({ page }) => {
-    const stats = new StatsPage(page);
+  test('renders stat rows @regression', async () => {
     await stats.open();
     await expect(stats.rows().first()).toBeVisible();
   });

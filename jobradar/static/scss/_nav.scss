@@ -117,17 +117,6 @@
   margin-left: auto;
   font-size: 0.74rem;
 }
-/* Jump to the hiring pipeline, shown only on the Applied tab. Pushed to the
-   right edge; the counter (if present) follows after the flex gap. */
-.tabrow .hiring-jump {
-  margin-left: auto;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.tabrow .hiring-jump:hover {
-  text-decoration: underline;
-}
 /* Filters in the header: one row by default, wrapping only when they don't fit.
    Search stretches, the rest keeps its width. */
 /* The form is flattened into .filterbar's flex row (display: contents): its

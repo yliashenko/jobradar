@@ -5,9 +5,26 @@ import { Routes } from '../utils/routes';
 import { sel } from '../utils/selectors';
 
 export class FeedPage extends BasePage {
+  tag(term: string): Locator {
+    return this.page.locator(sel.tag(term)).first();
+  }
+
+  scoring(hash: string){
+    return this.page.locator(`${hash} ${sel.scoreOpen}`).first();
+  }
+
+  statusButton(hash: string, status: string): Locator {
+    return this.card(hash).locator(sel.statusBtn(status));
+  }
+
   @step('open feed')
   async open(query = ''): Promise<void> {
     await this.page.goto(Routes.feed + query);
+  }
+
+  @step('open feed on status')
+  async openFeedOnStatus(status: string): Promise<void> {
+    await this.open(`?status=${status}`);
   }
 
   @step('apply filters')
@@ -15,17 +32,9 @@ export class FeedPage extends BasePage {
     await this.page.goto(`${Routes.feed}?${new URLSearchParams(params).toString()}`);
   }
 
-  tag(term: string): Locator {
-    return this.page.locator(sel.tag(term)).first();
-  }
-
   @step('filter by tag')
   async filterByTag(term: string): Promise<void> {
     await this.tag(term).click();
-  }
-
-  statusButton(hash: string, status: string): Locator {
-    return this.card(hash).locator(sel.statusBtn(status));
   }
 
   @step('change card status')

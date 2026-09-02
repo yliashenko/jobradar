@@ -77,8 +77,9 @@ CATALOG = [
         status="interested", score=7.5, band="good"),
     vac("v7", "Senior AQA", "Stark", desc="Selenium, Java",
         status="applied", score=8.2, band="strong"),
-    # Archived (finished hiring): hidden from every feed tab, but still counted on
-    # the calendar. Unique company / dou / reused tech so it perturbs no existing
+    # Archived (finished hiring): hidden from every feed tab by default (revealed
+    # only by the Applied tab's "Show archived" toggle), but still counted on the
+    # calendar. Unique company / dou / reused tech so it perturbs no existing
     # count; status_at is "today", coinciding with v7's applied activity.
     vac("v_arch", "Automation QA Engineer", "Zenith", desc="Playwright, pytest",
         status="archived", score=7.8, band="good", at=days_ago(5)),

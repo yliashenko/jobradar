@@ -165,7 +165,7 @@ and still **work**. Expands the terse PW-FEED-23 into a real first-run experienc
 
 | ID | Scenario | Layer | Covers | Prep |
 |---|---|---|---|---|
-| PW-HIRE-1 | A `/hiring` card moves `waiting_hr → pre_screen → tech_interview → finish` | E2E | HIRE-1.1 | seed applied |
+| PW-HIRE-1 | An Applied-tab pipeline card moves `waiting_hr → pre_screen → tech_interview → finish` | E2E | HIRE-1.1 | seed applied |
 | PW-HIRE-2 | The note shown for the current stage is saved before moving (never lost on switch) | E2E | HIRE-2.1 | seed |
 | PW-HIRE-3 | Notes are stored per stage — each stage keeps its own text | E2E | HIRE-2.2 | seed |
 | PW-HIRE-4 | "Finish & archive" sets `status=archived`; the card leaves the feed and its "all" count | E2E | HIRE-3.1 | seed applied |

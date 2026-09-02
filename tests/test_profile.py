@@ -276,7 +276,7 @@ class TestProfilePage:
             for key in roles.ROLE_ORDER:
                 assert (f'name="role" value="{key}"') in html, key
             assert "account-menu" in html
-            assert 'data-page="profile"' in html and 'data-page="hiring"' in html
+            assert 'data-page="profile"' in html
 
     def test_preview_highlights_skills_in_cv_text(self):
         with tempfile.TemporaryDirectory() as tmp:

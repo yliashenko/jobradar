@@ -41,9 +41,10 @@ mention it.
 
 ![Tags](docs/screenshots/tags.png)
 
-**Hiring (`/hiring`)** — the application pipeline: the vacancies you're acting on,
+**Hiring pipeline (feed → Applied tab)** — switching the feed to the **applied**
+status turns it into the application pipeline: the vacancies you're acting on,
 tracked through the hiring stages, with cover-letter generation and archiving of
-finished pipelines.
+finished pipelines (behind a "Show archived" toggle).
 
 ![Hiring](docs/screenshots/hiring.png)
 

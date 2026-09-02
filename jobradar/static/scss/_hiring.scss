@@ -1,6 +1,7 @@
-// Hiring pipeline page: applied vacancies, each with stage buttons + per-stage
-// notes. The stage buttons mirror the feed's status buttons; the textarea shows
-// the note for the currently selected stage (server-driven, no JS).
+// Hiring pipeline, rendered inside the feed's Applied tab: applied vacancies,
+// each with stage buttons + per-stage notes. The stage buttons mirror the feed's
+// status buttons; the textarea shows the note for the currently selected stage
+// (server-driven, no JS).
 
 /* Full .wrap width, like the rest of the pages — not narrower. */
 .hiring-head-row {
@@ -10,6 +11,11 @@
   gap: 1rem;
   flex-wrap: wrap;
   margin: 0.4rem 0 0.9rem;
+}
+/* Inline on the feed's Applied tab: only the archived toggle, pushed right (the
+   status tabrow above already carries the count). */
+.hiring-head-inline {
+  justify-content: flex-end;
 }
 .hiring-head {
   font-size: 0.95rem;

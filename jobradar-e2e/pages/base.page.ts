@@ -9,6 +9,6 @@ export abstract class BasePage {
   }
 
   card(hash: string): Locator {
-    return this.page.locator(sel.cardOf(hash));
+    return this.page.locator(sel.jobCardOf(hash));
   }
 }

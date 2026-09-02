@@ -106,7 +106,8 @@ CREATE INDEX IF NOT EXISTS idx_run_dups_run ON run_dups(run_id);
 
 # Triage statuses. 'new' is set by the collector, the rest by you in the web UI.
 # 'archived' is terminal: an applied vacancy whose hiring pipeline is finished
-# (set from /hiring), hidden from the feed tabs and shown only on /hiring.
+# (set from the Applied tab), hidden from the feed tabs and shown only behind that
+# tab's "Show archived" toggle.
 STATUSES = ("new", "interested", "applied", "skipped", "archived")
 
 # How many recent runs we keep with the full list of duplicates. The runs rows

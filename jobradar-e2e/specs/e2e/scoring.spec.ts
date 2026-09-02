@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/server';
 import { sel } from '../../utils/selectors';
 
 // v1 is seeded with a full scorer breakdown, so these run on seeded state alone.
-const v1 = sel.cardOf('v1');
+const v1 = sel.jobCardOf('v1');
 
 test.describe('score details', () => {
   test('the score popup shows band, verdict, covers and gaps @regression', async ({ page }) => {
@@ -38,6 +38,6 @@ test.describe('score details', () => {
   // scorer off + no key → an unscored card offers the "needs a key" affordance.
   test('an unscored card shows the no-key scoring affordance @regression', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator(`${sel.cardOf('v8')} [data-testid="score-nokey"]`)).toBeVisible();
+    await expect(page.locator(`${sel.jobCardOf('v8')} [data-testid="score-nokey"]`)).toBeVisible();
   });
 });

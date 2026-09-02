@@ -329,19 +329,6 @@ header {
   font-size: 0.74rem;
 }
 
-/* Jump to the hiring pipeline, shown only on the Applied tab. Pushed to the
-   right edge; the counter (if present) follows after the flex gap. */
-.tabrow .hiring-jump {
-  margin-left: auto;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.tabrow .hiring-jump:hover {
-  text-decoration: underline;
-}
-
 /* Filters in the header: one row by default, wrapping only when they don't fit.
    Search stretches, the rest keeps its width. */
 /* The form is flattened into .filterbar's flex row (display: contents): its
@@ -1737,7 +1724,8 @@ details.unfold[open] > summary .caret {
 }
 
 /* Cover-letter CTA — offered only on interested cards. Petrol outline to set it
-   apart from the neutral status buttons; opens the same letter modal as /hiring.
+   apart from the neutral status buttons; opens the same letter modal as the
+   Applied tab.
    margin-left:auto pushes it to the right so it sits just left of the source
    icon (openbox), matching the hiring card's side-foot order. */
 .actions .job-cl {
@@ -1836,6 +1824,12 @@ a.srcicon:hover {
   gap: 1rem;
   flex-wrap: wrap;
   margin: 0.4rem 0 0.9rem;
+}
+
+/* Inline on the feed's Applied tab: only the archived toggle, pushed right (the
+   status tabrow above already carries the count). */
+.hiring-head-inline {
+  justify-content: flex-end;
 }
 
 .hiring-head {

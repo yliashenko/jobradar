@@ -441,7 +441,8 @@ details.unfold[open] > summary .caret {
   border-color: var(--ink);
 }
 /* Cover-letter CTA — offered only on interested cards. Petrol outline to set it
-   apart from the neutral status buttons; opens the same letter modal as /hiring.
+   apart from the neutral status buttons; opens the same letter modal as the
+   Applied tab.
    margin-left:auto pushes it to the right so it sits just left of the source
    icon (openbox), matching the hiring card's side-foot order. */
 .actions .job-cl {
