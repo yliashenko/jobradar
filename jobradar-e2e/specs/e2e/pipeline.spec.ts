@@ -2,19 +2,24 @@ import { test, expect } from '../../fixtures/server';
 import { configureRun } from '../../fixtures/run';
 import { runScan } from '../../fixtures/helpers';
 import { sel } from '../../utils/selectors';
+import { FeedPage } from '../../pages/feed.page';
+import { vacancyStatuses } from '../../utils/statuses';
 
 // Flagship complex-e2e: heavy prep (fixture source + stub LLM + a real scan), a
 // thin UI assertion. The pipeline logic stays in pytest; these prove it surfaces
 // end-to-end. runScan is synchronous, so there's no async/lock race with the
 // per-test reset — POST /run's async trigger is covered by ops.spec.
 test.describe('pipeline run', () => {
+  let feed: FeedPage;
+  test.beforeEach(async ({ page }) => { feed = new FeedPage(page); });
+  
   test('a fresh scan surfaces a scored vacancy in the feed @regression', async ({ page, server }) => {
     await configureRun(server.home, server.llmUrl, [
       { title: 'Fixture QA Automation', company: 'Fixture Co', description: 'Playwright, pytest' },
     ]);
     await runScan(server.home);
 
-    await page.goto('/?status=all');
+    await feed.openFeedOnStatus(vacancyStatuses.all);
     const c = page.locator(sel.card, { hasText: 'Fixture QA Automation' });
     await expect(c).toBeVisible();
     await expect(c.locator(sel.scoreOpen)).toBeVisible();
@@ -27,7 +32,7 @@ test.describe('pipeline run', () => {
     ]);
     await runScan(server.home);
 
-    await page.goto('/?status=all');
+    await feed.openFeedOnStatus(vacancyStatuses.all);
     await expect(page.locator(sel.card, { hasText: 'Crosspost SDET Role' })).toHaveCount(1);
   });
 
@@ -38,7 +43,7 @@ test.describe('pipeline run', () => {
     ]);
     await runScan(server.home);
 
-    await page.goto('/?status=all');
+    await feed.openFeedOnStatus(vacancyStatuses.all);
     await expect(page.locator(sel.card, { hasText: /senior qa engineer/i })).toHaveCount(1);
   });
 
@@ -50,7 +55,7 @@ test.describe('pipeline run', () => {
     ]);
     await runScan(server.home);
 
-    await page.goto('/?status=all');
+    await feed.openFeedOnStatus(vacancyStatuses.all);
     await expect(page.locator(sel.card, { hasText: 'QA Engineer #' })).toHaveCount(2);
   });
 
@@ -67,7 +72,7 @@ test.describe('pipeline run', () => {
     );
     await runScan(server.home);
 
-    await page.goto('/?status=all');
+    await feed.openFeedOnStatus(vacancyStatuses.all);
     await expect(page.locator(sel.card, { hasText: 'Automation QA Wizard' })).toBeVisible();
     await expect(page.locator(sel.card, { hasText: 'Manual QA Tester' })).toHaveCount(0);
   });

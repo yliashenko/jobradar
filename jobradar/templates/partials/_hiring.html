@@ -1,14 +1,15 @@
-{% extends "base.html" %}
 {% import "partials/_macros.html" as ui %}
-
-{% block content %}
+{# The hiring pipeline, rendered inside the feed's Applied tab: applied vacancies
+   (newest application first) with stage buttons, per-stage notes and a cover
+   letter, plus the "Show archived" toggle. The status tabrow above shows the
+   count; the stage/cover forms post to /hiring/update and /hiring/cover and are
+   redirected back to this tab via `hiring_back`. #}
 <section class="hiring">
-  <div class="hiring-head-row">
-    <h2 class="hiring-head">Applied <span class="hiring-count" data-testid="hiring-count">{{ count }}</span></h2>
-    {% if archived_count or show_archived %}
-    <a class="hiring-toggle{% if show_archived %} on{% endif %}" href="{{ toggle_href }}" data-testid="hiring-archived-toggle">{% if show_archived %}Hide archived{% else %}Show archived{% endif %} <span class="n">{{ archived_count }}</span></a>
-    {% endif %}
+  {% if archived_count or show_archived %}
+  <div class="hiring-head-row hiring-head-inline">
+    <a class="hiring-toggle{% if show_archived %} on{% endif %}" href="{{ hiring_toggle_href }}" data-testid="hiring-archived-toggle">{% if show_archived %}Hide archived{% else %}Show archived{% endif %} <span class="n">{{ archived_count }}</span></a>
   </div>
+  {% endif %}
 
   {% if not rows %}
   <p class="empty">Nothing here yet. Mark a vacancy as <b>applied</b> in the feed and it moves into the hiring pipeline.</p>
@@ -29,7 +30,7 @@
         {% if notes.get(final) %}<p class="harch-note">{{ notes.get(final) }}</p>{% endif %}
         <form method="post" action="/hiring/update" class="harch-actions">
           <input type="hidden" name="hash" value="{{ row['hash'] }}">
-          <input type="hidden" name="back" value="{{ back }}">
+          <input type="hidden" name="back" value="{{ hiring_back }}">
           <input type="hidden" name="restore" value="1">
           <button class="harch-restore" data-testid="hiring-restore">↩ Restore to Applied</button>
         </form>
@@ -53,7 +54,7 @@
 
       <form method="post" action="/hiring/update" class="hstages" data-testid="hiring-form">
         <input type="hidden" name="hash" value="{{ row['hash'] }}">
-        <input type="hidden" name="back" value="{{ back }}">
+        <input type="hidden" name="back" value="{{ hiring_back }}">
         <input type="hidden" name="stage" value="{{ sel }}">
         <div class="hstage-btns">
           {% for stage in HIRING_ORDER %}
@@ -85,7 +86,7 @@
           <p class="archpop-text">Move <b>{{ row['title'] }}</b>{% if row['company'] %} at {{ row['company'] }}{% endif %} to the archive. This ends the pipeline for this vacancy — you can bring it back later with <b>Show archived</b>. Saved notes are kept.</p>
           <form method="post" action="/hiring/update" class="archpop-actions">
             <input type="hidden" name="hash" value="{{ row['hash'] }}">
-            <input type="hidden" name="back" value="{{ back }}">
+            <input type="hidden" name="back" value="{{ hiring_back }}">
             <input type="hidden" name="archive" value="1">
             <a class="archpop-cancel" href="#">Cancel</a>
             <button class="archpop-confirm" data-testid="hiring-archive-confirm">Archive</button>
@@ -117,6 +118,4 @@
     {% endfor %}
   </div>
   {% endif %}
-  {% if not llm_ready %}{{ ui.llm_gate(params.get('token', '')) }}{% endif %}
 </section>
-{% endblock %}

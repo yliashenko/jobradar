@@ -62,7 +62,7 @@
 <details class="menu account-menu">
   <summary aria-label="account menu" title="Account">{{ ACCOUNT_ICON }}</summary>
   <nav>
-    {% for label, path, key in [('Profile', '/profile', 'profile'), ('Hiring Process', '/hiring', 'hiring')] %}
+    {% for label, path, key in [('Profile', '/profile', 'profile')] %}
     <a{% if key == active %} class="on"{% endif %} href="{{ page_link(path, params) }}" data-testid="account-link" data-page="{{ key }}">{{ label }}</a>
     {% endfor %}
   </nav>
@@ -147,7 +147,6 @@
   <div class="tabs">
     {% for tab in t.tabs %}<a class="tab{% if tab.on %} on{% endif %}" href="{{ tab.href }}">{{ tab.label }} <span class="n">{{ tab.count }}</span></a>{% endfor %}
   </div>
-  {% if t.on_applied %}<a class="hiring-jump" href="/hiring" data-testid="hiring-jump">Hiring Process →</a>{% endif %}
   {% if t.shown is not none %}<span class="counts"><b>{{ t.total }}</b> in the database · shown <b>{{ t.shown }}</b></span>{% endif %}
 </div>
 {% endmacro %}

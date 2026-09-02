@@ -238,7 +238,8 @@ class TestAuth:
 
 
 class TestHiring:
-    """The /hiring pipeline: only applied vacancies, stage moves, per-stage notes."""
+    """The hiring pipeline, rendered on the feed's Applied tab: only applied
+    vacancies, stage moves, per-stage notes."""
 
     def _apply(self, digest="h1"):
         conn = dbmod.db_connect()
@@ -248,13 +249,14 @@ class TestHiring:
 
     def test_lists_only_applied(self, client):
         self._apply("h1")
-        html = client.get("/hiring").get_data(as_text=True)
-        assert "Applied" in html
+        html = client.get("/?status=applied").get_data(as_text=True)
+        assert 'data-testid="hiring-list"' in html  # the pipeline, not the feed
         assert "Senior QA Automation Engineer" in html  # h1 — applied
         assert "Middle QA" not in html  # h2 — still 'new'
 
     def test_empty_when_none_applied(self, client):
-        assert "Nothing here yet" in client.get("/hiring").get_data(as_text=True)
+        html = client.get("/?status=applied").get_data(as_text=True)
+        assert "Nothing here yet" in html
 
     def test_card_shows_pub_and_upd_dates(self, client):
         conn = dbmod.db_connect()
@@ -264,7 +266,7 @@ class TestHiring:
         )
         conn.commit()
         conn.close()
-        html = client.get("/hiring").get_data(as_text=True)
+        html = client.get("/?status=applied").get_data(as_text=True)
         assert 'class="dates"' in html  # shared card_dates macro
         assert "date upd" in html  # status_at present
         assert "19.08" in html  # published date, short form
@@ -335,10 +337,10 @@ class TestHiring:
     def test_archived_hidden_by_default_shown_with_toggle(self, client):
         self._apply("h1")
         client.post("/hiring/update", data={"hash": "h1", "archive": "1"})
-        default = client.get("/hiring").get_data(as_text=True)
+        default = client.get("/?status=applied").get_data(as_text=True)
         assert "Senior QA Automation Engineer" not in default
         assert "Show archived" in default  # the toggle offers the archived view
-        shown = client.get("/hiring?archived=1").get_data(as_text=True)
+        shown = client.get("/?status=applied&archived=1").get_data(as_text=True)
         assert "Senior QA Automation Engineer" in shown
         assert 'data-testid="hiring-archived-badge"' in shown
 
@@ -540,14 +542,14 @@ class TestCoverLetter:
 
     def test_button_present_when_no_letter(self, tmp_path, monkeypatch):
         client, _ = self._client(tmp_path, monkeypatch)
-        html = client.get("/hiring").get_data(as_text=True)
+        html = client.get("/?status=applied").get_data(as_text=True)
         assert 'data-testid="hiring-cover-open"' in html
         assert "Generate cover letter" in html
 
     def test_saved_letter_renders_in_modal(self, tmp_path, monkeypatch):
         client, _ = self._client(tmp_path, monkeypatch)
         client.post("/hiring/cover", data={"hash": "h1"})
-        html = client.get("/hiring").get_data(as_text=True)
+        html = client.get("/?status=applied").get_data(as_text=True)
         assert _FAKE_COVER["letter"] in html
         assert "Regenerate" in html  # the button flips once a letter exists
         assert "GREEN EDGE" in html
@@ -595,7 +597,7 @@ class TestKeylessUI:
         conn.execute("UPDATE jobs SET status = 'applied' WHERE hash = 'h1'")
         conn.commit()
         conn.close()
-        html = client.get("/hiring").get_data(as_text=True)
+        html = client.get("/?status=applied").get_data(as_text=True)
         assert 'href="#llm-nokey"' in html  # ✍ points at the explanation
         assert 'data-testid="llm-nokey-modal"' in html
 

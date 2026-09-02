@@ -1,16 +1,18 @@
+import { writeProfile } from '../../fixtures/overlays';
 import { test, expect } from '../../fixtures/server';
 import { FeedPage } from '../../pages/feed.page';
 import { Routes } from '../../utils/routes';
 import { sel } from '../../utils/selectors';
+import { vacancyStatuses } from '../../utils/statuses';
 
 const scoreNum = `${sel.card} ${sel.scoreOpen} .num`;
 
 test.describe('Feed', () => {
   test('the default feed shows new vacancies and hides triaged ones @smoke', async ({ page }) => {
     await page.goto(Routes.feed);
-    await expect(page.locator(sel.cardOf('v1'))).toBeVisible();
-    await expect(page.locator(sel.cardOf('v6'))).toHaveCount(0);
-    await expect(page.locator(sel.cardOf('v7'))).toHaveCount(0);
+    await expect(page.locator(sel.jobCardOf('v1'))).toBeVisible();
+    await expect(page.locator(sel.jobCardOf('v6'))).toHaveCount(0);
+    await expect(page.locator(sel.jobCardOf('v7'))).toHaveCount(0);
   });
 
   test('every card on the default feed is in the `new` status @smoke', async ({ page }) => {
@@ -23,17 +25,18 @@ test.describe('Feed', () => {
   test('changing a card status through the UI persists across navigation @regression', async ({ page }) => {
     const feed = new FeedPage(page);
     await feed.open();
-    await expect(feed.card('v1')).toHaveCount(1);
-    await feed.setStatus('v1', 'interested');
+    
+    await feed.setStatus('v1', vacancyStatuses.interested); // move v1 to interested
     await expect(feed.card('v1')).toHaveCount(0);
-    await feed.open('?status=interested');
+    
+    await feed.openFeedOnStatus(vacancyStatuses.interested);
     await expect(feed.card('v1')).toHaveCount(1);
   });
 
   test('an archived vacancy is absent from the all tab @regression', async ({ page }) => {
     await page.goto('/?status=all');
-    await expect(page.locator(sel.cardOf('v_arch'))).toHaveCount(0);
-    await expect(page.locator(sel.cardOf('v1'))).toBeVisible(); // guard vs empty-page false pass
+    await expect(page.locator(sel.jobCardOf('v_arch'))).toHaveCount(0);
+    await expect(page.locator(sel.jobCardOf('v1'))).toBeVisible(); // guard vs empty-page false pass
   });
 });
 
@@ -70,5 +73,12 @@ test.describe('feed card interactions', () => {
   test('an unscored card sinks to the bottom under score low → high @regression', async ({ page }) => {
     await page.goto('/?status=all&tech=API&sort=score_asc');
     await expect(page.locator(sel.card).last()).toHaveAttribute('data-hash', 'v8');
+  });
+
+  test('a vacancy whose title carries an excluded skill is hidden from the feed @regression', async ({ page, server }) => {
+    await writeProfile(server.home, { exclude: ['JavaScript'] });
+    await page.goto('/');
+    await expect(page.locator(sel.jobCardOf('v3'))).toHaveCount(0); // title "…(JavaScript)"
+    await expect(page.locator(sel.jobCardOf('v1'))).toBeVisible();
   });
 });

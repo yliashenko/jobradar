@@ -66,8 +66,10 @@ Rule (`auth.require_token`):
 ## Status vocabulary (`status` values for `POST /status`)
 
 `new`, `interested`, `applied`, `skipped` — the UI labels match the keys
-(English, lowercase). `archived` is a terminal value with no feed tab (it lives
-on `/hiring`); `rejected` is a legacy value migrated to `skipped`.
+(English, lowercase). `archived` is a terminal value with no feed tab of its own
+(it lives on the Applied tab, behind its "Show archived" toggle:
+`/?status=applied&archived=1`); `rejected` is a legacy value migrated to
+`skipped`.
 
 ## Notes for tests
 

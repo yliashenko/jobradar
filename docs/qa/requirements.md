@@ -337,7 +337,8 @@ top risk — the heartbeat guards it.* `[INV]`
 > **Trace:** #1, #15
 
 - **FEED-2.1** Status tabs are `new / interested / applied / skipped` with live
-  counters. (`archived` has no feed tab — it lives on `/hiring`.)
+  counters. (`archived` has no feed tab of its own — it lives on the Applied tab,
+  behind its "Show archived" toggle.)
 - **FEED-2.2** `POST /status` writes `status` + `status_at`; the change survives
   a reload (UI+DB end-to-end).
 - **FEED-2.3** An unknown status or empty hash → 400, nothing written.
@@ -520,7 +521,7 @@ letter from the candidate's own facts.*
 ### HIRE-1 — Move a vacancy through hiring stages
 > As an applicant, I want to track a vacancy across stages. **Trace:** #13
 
-- **HIRE-1.1** `/hiring` cards move through `waiting_hr → pre_screen →
+- **HIRE-1.1** Applied-tab pipeline cards move through `waiting_hr → pre_screen →
   tech_interview → finish` via `POST /hiring/update`.
 
 ### HIRE-2 — Notes are never dropped

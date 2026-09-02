@@ -252,22 +252,6 @@ def status():
     return _redirect_back(back)
 
 
-@bp.route("/hiring")
-def hiring():
-    params = _params()
-    require_token(params.get("token", ""))
-    conn = get_db()
-    if conn is None:
-        return _empty()
-    return render_template(
-        "hiring.html",
-        title="hiring",
-        active="hiring",
-        params=params,
-        **views.hiring_context(conn, params),
-    )
-
-
 @bp.route("/hiring/update", methods=["POST"])
 def hiring_update():
     back = request.form.get("back", "")
@@ -308,7 +292,9 @@ def hiring_update():
         (new_stage, json.dumps(notes, ensure_ascii=False), upd["hash"]),
     )
     conn.commit()
-    return redirect("/hiring" + ("?" + back if back else ""), code=303)
+    # The pipeline now lives on the feed's Applied tab; `back` carries its query
+    # (status=applied[&archived=1]…), so return the person to the same view.
+    return _redirect_back(back)
 
 
 @bp.route("/hiring/cover", methods=["POST"])

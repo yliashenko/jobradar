@@ -11,7 +11,9 @@
 {% set ac = ui.active_companies(params) %}
 {{ ui.status_tabs(tabs) }}
 {% if at.strip() or ac.strip() %}<div class="listbar">{{ at }}{{ ac }}</div>{% endif %}
-{% if has_jobs %}
+{% if applied %}
+{% include "partials/_hiring.html" %}
+{% elif has_jobs %}
 <div class="feed" data-testid="feed">
   {% for item in groups %}
   {% if item.kind == 'group' %}{{ card.company_group(item.company, item.members, threshold, params, runbox.back, also) }}{% else %}{{ card.job_card(item.row, threshold, params, runbox.back, also_on_links=also.get(item.row['hash'])) }}{% endif %}

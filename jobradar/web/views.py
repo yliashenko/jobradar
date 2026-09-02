@@ -575,11 +575,16 @@ def last_collect_text(last_collect, last_run=None):
 def _build_where(params):
     where, args = [], []
     status = params.get("status", "new")
-    if status and status != "all":
+    if status == "applied" and params.get("archived") == "1":
+        # The Applied tab is the hiring pipeline; its "Show archived" toggle folds
+        # finalized vacancies back into the same list.
+        where.append("status IN ('applied', 'archived')")
+    elif status and status != "all":
         where.append("status = ?")
         args.append(status)
     else:
-        # The 'all' tab still hides archived — finished vacancies live on /hiring.
+        # The 'all' tab still hides archived — finished vacancies live on the
+        # Applied tab, behind its archived toggle.
         where.append("status != 'archived'")
     if params.get("source"):
         where.append("source = ?")
@@ -683,12 +688,10 @@ def _tabs(params, counts, total, shown):
                 "href": feed_link(params, status=key),
             }
         )
-    # On the Applied tab, offer a jump to the hiring pipeline for those vacancies.
     return {
         "tabs": tabs,
         "total": total,
         "shown": shown,
-        "on_applied": status == "applied",
     }
 
 
@@ -842,9 +845,7 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
             continue
         counts[r["status"]] = counts.get(r["status"], 0) + 1
 
-    return {
-        "groups": _group(rows),
-        "also": build_also_on(conn, rows),
+    ctx = {
         "has_jobs": bool(rows),
         "empty": _empty_feed(params),
         "tabs": _tabs(params, counts, sum(counts.values()), len(rows)),
@@ -854,6 +855,33 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
         "runbox": _runbox(conn, run_status, query),
         "threshold": threshold,
         "busy": bool(run_status.get("running") or run_status.get("external")),
+    }
+    # The Applied tab renders the hiring pipeline in place of the ranked feed: flat
+    # (ungrouped) applied cards with stage/notes/cover, plus the archived toggle.
+    if params.get("status", "new") == "applied":
+        ctx.update(_applied_extra(conn, params, rows, query))
+    else:
+        ctx["applied"] = False
+        ctx["groups"] = _group(rows)
+        ctx["also"] = build_also_on(conn, rows)
+    return ctx
+
+
+def _applied_extra(conn, params, rows, query) -> dict:
+    """Hiring-pipeline fields for the Applied tab: the flat filtered row list, the
+    archived toggle, and the redirect target the stage/cover forms post back to."""
+    show_archived = params.get("archived") == "1"
+    archived_count = conn.execute(
+        "SELECT COUNT(*) AS c FROM jobs WHERE status = 'archived'"
+    ).fetchone()["c"]
+    toggle_qs = build_query(params, archived="" if show_archived else "1")
+    return {
+        "applied": True,
+        "rows": rows,
+        "archived_count": archived_count,
+        "show_archived": show_archived,
+        "hiring_toggle_href": "/" + (("?" + toggle_qs) if toggle_qs else ""),
+        "hiring_back": query,
     }
 
 
@@ -947,34 +975,6 @@ def company_context(conn, params, threshold) -> dict:
         "info": _company_info(rows),
         "also": build_also_on(conn, rows),
         "threshold": threshold,
-    }
-
-
-def hiring_context(conn, params) -> dict:
-    """The hiring pipeline page: every applied vacancy, newest application first,
-    each carrying its stage + per-stage notes (rendered by the hiring card).
-    'Show archived' (archived=1) folds finalized vacancies back into the list."""
-    show_archived = params.get("archived") == "1"
-    statuses = ("applied", "archived") if show_archived else ("applied",)
-    placeholders = ",".join("?" * len(statuses))
-    rows = conn.execute(
-        f"SELECT * FROM jobs WHERE status IN ({placeholders}) "
-        "ORDER BY status_at DESC, first_seen DESC",
-        statuses,
-    ).fetchall()
-    applied_count = sum(1 for r in rows if r["status"] == "applied")
-    archived_count = conn.execute(
-        "SELECT COUNT(*) AS c FROM jobs WHERE status = 'archived'"
-    ).fetchone()["c"]
-    token = params.get("token", "")
-    toggle_qs = build_query(params, archived="" if show_archived else "1")
-    return {
-        "rows": rows,
-        "count": applied_count,
-        "archived_count": archived_count,
-        "show_archived": show_archived,
-        "toggle_href": "/hiring" + (("?" + toggle_qs) if toggle_qs else ""),
-        "back": ("token=" + token) if token else "",
     }
 
 
