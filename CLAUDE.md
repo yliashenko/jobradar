@@ -76,7 +76,7 @@ Source of truth for structure and past decisions: `docs/adr/` and the README. Pr
   `docs:` / `style:` / `chore:`. One logical change per commit; docs separate from code.
 - **main stays green.** Short-lived `feat/<slug>` branches for multi-commit work; deploy = tag.
   No force-push to main, no rebase of published history; undo is a revert commit.
-- Never commit `config.json`, `jobs.db`, logs, or un-sanitized real `.eml` (`.gitignore`).
+- Never commit `config.json`, `jobs.db`, or logs (`.gitignore`).
 
 ## 4. Invariants — do not "fix" these silently
 
@@ -93,15 +93,16 @@ These are deliberate trade-offs, not bugs. Changing one needs a reason and usual
   skew toward showing duplicates over missing a vacancy; a role reopened after ~6 months
   should return with status reset. Known duplicate cases (internal number changes, seniority
   renames) are accepted on purpose — don't strip digits from titles to "fix" it.
-- **Boards are not scraped.** Djinni/LinkedIn arrive as email alerts read from one IMAP
-  folder; DOU stays on official RSS. Don't propose Selenium/Playwright scraping of boards.
-- **Silent failure is the top risk.** A broken alert parser looks exactly like an empty
-  market. The 24-hour heartbeat (no new records → Telegram) guards it — don't remove it.
+- **Boards are not scraped.** DOU and Djinni are read from their official RSS only; there
+  is no email/IMAP integration. Don't propose Selenium/Playwright scraping of boards, or
+  re-adding an email source.
+- **Silent failure is the top risk.** A broken feed parser looks exactly like an empty
+  market. The heartbeat (no new records for N hours → Telegram) guards it — don't remove it.
 - **DOU feed caps at 25 records.** A feed that hit the cap is flagged on `/runs` — keep the
   marker; it's the only way the radar can silently drop rows.
 - **LLM scoring is two-tier:** L0 (regex + salary-band, free, deterministic) gates L1 (LLM).
-  L0 changes don't apply retroactively; LinkedIn alerts have no description → the scorer is
-  told not to exceed 6.
+  L0 changes don't apply retroactively; a posting with no description → the scorer is told
+  not to exceed 6.
 - **Testability seams (keep working):** `JOBRADAR_HOME` env-override for all paths; injected
   `clock`; swappable scorer/source; stable `data-testid` on key UI nodes (the Playwright e2e
   in `jobradar-e2e/` depends on them).
@@ -116,7 +117,7 @@ make serve      # web UI on localhost (Flask)
 
 python -m jobradar serve   # web UI
 python -m jobradar run     # a scan (add --dry-run to skip sending)
-python -m jobradar check   # verify DOU / IMAP / scorer / Telegram
+python -m jobradar check   # verify DOU / scorer / Telegram
 python -m jobradar stats   # collection funnel — the main tuning tool
 python -m jobradar top     # best from the DB
 ```

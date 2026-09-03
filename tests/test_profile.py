@@ -1190,15 +1190,15 @@ class TestMultiSource:
             conn = self._conn(tmp)
             conn.execute(
                 "INSERT INTO jobs(hash,source,url,title,first_seen,l0_pass,status,sources)"
-                " VALUES('h3','linkedin','li/3','QA','2026-08-15T09:00:00+00:00',1,'new',"
-                '\'{"linkedin": "li/3"}\')'
+                " VALUES('h3','someboard','sb/3','QA','2026-08-15T09:00:00+00:00',1,'new',"
+                '\'{"someboard": "sb/3"}\')'
             )
             conn.commit()
             card = render_card(
                 conn.execute("SELECT * FROM jobs WHERE hash='h3'").fetchone(), 7.0
             )
             # Джерело без логотипа падає на текстову мітку, а не ламається.
-            assert "srctext" in card and "linkedin" in card
+            assert "srctext" in card and "someboard" in card
             assert "srclogo" not in card
             conn.close()
 

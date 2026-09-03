@@ -1,7 +1,7 @@
 """Single entry point: `python -m jobradar <command>`.
 
     python -m jobradar run [--dry-run]   # radar run
-    python -m jobradar check             # check DOU/IMAP/scorer/Telegram
+    python -m jobradar check             # check DOU/scorer/Telegram
     python -m jobradar top [--limit N]   # best from the DB
     python -m jobradar stats             # collection funnel
     python -m jobradar serve [--port N]  # web interface

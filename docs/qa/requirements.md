@@ -60,9 +60,8 @@ decision must not be "fixed" silently.
 
 ## Epic 1 — Ingestion
 
-*Collect vacancies from real UA sources. Boards are never scraped: DOU is
-official RSS, Djinni is official RSS, LinkedIn/Djinni email alerts arrive over
-IMAP (BYOA).* `[INV]`
+*Collect vacancies from real UA sources. Boards are never scraped: DOU and Djinni
+are read from their official RSS only. There is no email/IMAP source.* `[INV]`
 
 ### ING-1 — Collect from DOU RSS as broad role slices
 > As a candidate, I want the radar to pull DOU vacancies by **role/experience/
@@ -86,21 +85,8 @@ IMAP (BYOA).* `[INV]`
 - **ING-2.3** Djinni carries no company in the title → dedup falls back to the
   stable job URL. `[INV]` (accepted DOU+Djinni double-show)
 
-### ING-3 — Collect from email alerts (Djinni / LinkedIn) over IMAP
-> As a candidate, I want to forward my own board alerts to one IMAP folder and
-> have vacancies extracted from them, so that LinkedIn (never scrapable) still
-> reaches the radar. **Trace:** #1
->
-> **Playwright scope: OUT.** Pytest base
-> ([test_collectors.py](../../tests/test_collectors.py)). Email/IMAP has no
-> browser surface; a fixture-sourced vacancy landing in the feed is already
-> covered source-agnostically by PW-PIPE-1.
-
-- **ING-3.1** A sanitized Djinni `.eml` yields the expected set of vacancies.
-- **ING-3.2** A sanitized LinkedIn `.eml` yields vacancies **without a
-  description**.
-- **ING-3.3** A layout the regex no longer matches yields 0 vacancies (and is
-  caught by the heartbeat, not by a crash). `[INV]` (silent-failure surface)
+> **ING-3 (email alerts over IMAP) — REMOVED.** The email/IMAP source was dropped;
+> DOU and Djinni RSS are the only sources. The ID is retired, not reused.
 
 ### ING-4 — Normalise feed content
 > As the pipeline, I want feed HTML sanitised and dates parsed to a canonical
@@ -245,7 +231,7 @@ to say GAP not PARTIAL. Scores are never recomputed.* `[INV]`
 > **Playwright scope: OUT.** The ≤6 cap is a scorer-prompt behaviour — no
 > deterministic assertion with a mock scorer, no UI surface. Pytest owns it.
 
-- **SCO-4.1** A LinkedIn vacancy (no description) is scored no higher than 6. `[INV]`
+- **SCO-4.1** A vacancy with no description is scored no higher than 6. `[INV]`
 
 ### SCO-5 — Threshold gates notification
 > As a candidate, I only want Telegram for real matches. **Trace:** #1
@@ -272,8 +258,9 @@ to say GAP not PARTIAL. Scores are never recomputed.* `[INV]`
 
 - **SCO-7.1** Provider defaults to Anthropic; `provider=openai` (+ `base_url`)
   routes to any OpenAI-compatible endpoint (gateway / local Ollama).
-- **SCO-7.2** Key + provider precedence is **Profile → config → env**
-  (`llm_settings`).
+- **SCO-7.2** Key + provider come **only from the profile** (`llm_settings`) —
+  there is no `config.json` or `ANTHROPIC_API_KEY` fallback; the profile is the
+  single source.
 
 ### SCO-8 — Degrade gracefully without a key
 > As a first-week user, I want the pipeline usable before I pay for scoring.
@@ -596,7 +583,7 @@ spawning duplicates.*
 > As an operator, I want `run / check / top / stats` from the terminal.
 > **Trace:** #1
 
-- **OPS-3.1** `check` reports DOU / IMAP / scorer / Telegram connectivity and
+- **OPS-3.1** `check` reports DOU / scorer / Telegram connectivity and
   writes nothing to the DB.
 - **OPS-3.2** `top` lists best-scored vacancies; `stats` prints the funnel
   (total / passed L0 / notified) + by-source + top L0 reasons.

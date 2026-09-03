@@ -270,17 +270,11 @@ def register_jinja(app) -> None:
 
     @app.context_processor
     def _inject_llm_ready():
-        """Whether an LLM key is configured (Profile → config → env). Templates use
-        it to gate scoring/cover-letter affordances into an explanation instead."""
-        from flask import current_app
-
+        """Whether an LLM key is configured (profile only). Templates use it to gate
+        scoring/cover-letter affordances into an explanation instead."""
         from jobradar.core.scoring import effective_api_key
 
         try:
-            return {
-                "llm_ready": bool(
-                    effective_api_key(current_app.config.get("JOBRADAR", {}))
-                )
-            }
+            return {"llm_ready": bool(effective_api_key())}
         except Exception:
             return {"llm_ready": False}

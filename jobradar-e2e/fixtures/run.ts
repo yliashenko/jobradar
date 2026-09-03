@@ -12,10 +12,11 @@ export interface FixtureJob {
   description?: string;
 }
 
-// Point a triggered run at a fixture source + the stub LLM by patching the worker's
-// config.json. `sources.fixture` replaces the whole network (the product already
-// supports it); the scorer routes to the OpenAI-compatible stub. resetState
-// restores config.json before the next test, so this stays isolated.
+// Point a triggered run at a fixture source + the stub LLM. `sources.fixture`
+// (patched into config.json) replaces the whole network; the LLM account — provider,
+// base_url (the OpenAI-compatible stub) and key — lives in the profile, the product's
+// single source. resetState restores config.json and drops profile.json before the
+// next test, so this stays isolated.
 export async function configureRun(
   home: string,
   llmUrl: string,
@@ -36,15 +37,19 @@ export async function configureRun(
 
   const cfg = JSON.parse(await readFile(join(home, 'config.json'), 'utf-8'));
   cfg.sources = { ...(cfg.sources || {}), fixture: { enabled: true, path: fixturePath } };
-  cfg.scorer = { enabled: true, provider: 'openai', base_url: llmUrl, api_key: 'test', model: 'stub' };
-  // load_config requires telegram creds; the stub scores below threshold so the
-  // pipeline never reaches the notify line — these dummies are never used to send.
-  cfg.telegram = { bot_token: 'stub', chat_id: 'stub' };
+  cfg.scorer = { enabled: true, model: 'stub' };
   Object.assign(cfg, extra); // e.g. { l0: { exclude_title: [...] } }
   await writeFile(join(home, 'config.json'), JSON.stringify(cfg, null, 2));
 
-  // The scorer needs a profile to score against; without one it errors and leaves
-  // the row unscored (and score-None would reach the notify line). resetState
+  // The account (key + OpenAI-compatible stub endpoint) and the profile to score
+  // against both live in profile.json — the single source llm_settings() reads.
+  // Without a profile the scorer errors and leaves the row unscored; resetState
   // deletes profile.json before each test, so this is isolated.
-  await writeProfile(home, { cv_text: 'QA Automation Engineer — Playwright, pytest.', notes: 'QA.' });
+  await writeProfile(home, {
+    cv_text: 'QA Automation Engineer — Playwright, pytest.',
+    notes: 'QA.',
+    api_key: 'test',
+    llm_provider: 'openai',
+    llm_base_url: llmUrl,
+  });
 }

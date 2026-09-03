@@ -365,14 +365,13 @@ def hiring_cover():
         )
     cfg = current_app.config.get("JOBRADAR", {}) or {}
     cl = cfg.get("cover_letter", {}) or {}
-    # Provider/key precedence shared with the scorer (Profile → config → env), so a
-    # handed-off tool runs every LLM feature on the new owner's account/provider.
-    provider, base_url, api_key = llm_settings(cfg)
+    # The account (key/provider) lives only in the profile — one place to set it,
+    # shared by scoring and cover letters.
+    provider, base_url, api_key = llm_settings()
     if not api_key:
         return jsonify(
             ok=False,
-            error="No API key. Add your API key in Settings → LLM access "
-            "(or set scorer.api_key / ANTHROPIC_API_KEY).",
+            error="No API key. Add your API key in Settings → LLM access.",
         )
     # The cover-letter model is the profile's llm_model (scoring keeps its own).
     model = profile_data.load().get("llm_model") or cl.get("model", COVER_MODEL)

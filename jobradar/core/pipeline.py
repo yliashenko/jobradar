@@ -122,7 +122,7 @@ def _store(conn, run_id, collected, cfg):
                 job["location"],
                 job["salary"],
                 job["description"],
-                # Email has neither markup nor a publish date — left empty.
+                # A source may give no HTML markup or publish date — left empty then.
                 job.get("description_html", ""),
                 job.get("published_at") or None,
                 job.get("extra", ""),
@@ -160,9 +160,9 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
     """Score (swappable scorer), store the score, send those above the threshold."""
     scorer_cfg = cfg.get("scorer", {})
     if scorer is None:
-        # The key may live in the profile (own-account use), config, or env — one
-        # helper decides, so gating and build_scorer never disagree.
-        api_key = effective_api_key(cfg)
+        # The key lives only in the profile (Settings page) — one helper decides,
+        # so gating and build_scorer never disagree.
+        api_key = effective_api_key()
         profile = load_profile() if (scorer_cfg.get("enabled") and api_key) else ""
         scorer = build_scorer(cfg, profile=profile)
     threshold = effective_threshold()
@@ -247,7 +247,7 @@ def heartbeat(conn, dry_run, notify=telegram_send):
     text = (
         f"🔕 <b>jobradar: silence for {hours}h</b>\n"
         f"No new vacancy since {escape(last_new[:16])}. Either the market really is "
-        "empty, or the parser broke silently (the email layout changed / the mail filter).\n"
+        "empty, or a feed broke silently (a DOU/Djinni RSS layout change).\n"
         f"Total in the DB: {total}."
     )
     if not telegram_enabled():

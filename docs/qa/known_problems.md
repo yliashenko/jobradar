@@ -85,7 +85,7 @@ verify wiring, not real model behavior. The stub's request routing
 (`body.includes('cover')`) is a fragile heuristic. The real scoring/cover LLM
 contract is not exercised deterministically anywhere — a conscious trade-off, but
 a blind spot. The "covered by pytest" claim for the out-of-scope areas
-(notifications, email, auth internals, scorer prompt) is **asserted, not verified**
+(notifications, auth internals, scorer prompt) is **asserted, not verified**
 from the e2e side.
 
 ## 9. Smaller items (low)

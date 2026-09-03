@@ -82,7 +82,7 @@ jobradar/
 │   └── templates/        base.html + one-page-per-route + partials/*macros
 ├── core/                 the pipeline core (stdlib), split along seams:
 │   ├── pipeline.py        the funnel: collect → dedup → L0 → scoring → notify
-│   ├── collectors/{dou,djinni,email_alerts}.py + sources.py + http.py   sources (swappable)
+│   ├── collectors/{dou,djinni}.py + sources.py + http.py   sources (swappable)
 │   ├── scoring.py  notify.py           L1 scoring (swappable) and Telegram
 │   └── db.py  dedup.py  filters.py  text.py
 ├── roles.py  skills.py  candidate.py  stats.py   domain (does not import core)
@@ -98,11 +98,13 @@ Also for more information see [detailed artifact](https://claude.ai/code/artifac
 
 ## Quick start
 
+**Requires Python 3.10+** (the tooling floor; CI runs 3.10 and 3.12).
+
 ```sh
 git clone <this-repo> && cd job-radar
 make install                       # venv + dev dependencies
 
-cp config.example.json config.json # mailbox + machine settings — see §2 below
+cp config.example.json config.json # machine settings (feeds, scorer) — see §2 below
 cp profile.example.md profile.md   # or build the profile in the web UI
 
 make serve                         # web UI at http://localhost:8787
@@ -183,11 +185,13 @@ with no key at all.)
   **only for _Other_** — Anthropic and plain OpenAI use their own default endpoint.
 - **Cover-letter model** — a dropdown (default Claude Sonnet 5). This is *only* the
   cover-letter model; **L1 scoring keeps its own cheaper model** in `config.json`
-  (`scorer.model`, Claude Haiku by default — see §2).
+  (`scorer.model`; blank → a cheap per-provider default — see §2).
 
-Precedence for the key/provider: **Settings → `config.json` (`scorer.*`) → the
-`ANTHROPIC_API_KEY` env var**. No key → the pipeline still runs and just sends
-everything that passed L0 (handy for the first week, before you pay for scoring).
+The key/provider live **only here** (in `profile.json`) — the **single place** to
+see and set them. There is no `config.json` or `ANTHROPIC_API_KEY` fallback.
+Scoring runs on **your own account** (the key you enter); no key → the pipeline
+still runs and just sends everything that passed L0 (handy for the first week,
+before you pay for scoring).
 
 ### Telegram bot
 
@@ -229,22 +233,24 @@ chmod 600 config.json
 Account and output settings live on the **Settings page** (§1). What stays in
 `config.json` is machine-level:
 
-- **`sources.imap.user` / `sources.imap.password`** — the mailbox for Djinni/LinkedIn
-  email alerts. Skip if you only use DOU RSS (`sources.imap.enabled: false`).
-- **`scorer.enabled` / `scorer.model`** — turn L1 scoring on/off and pick its (cheap)
-  model. **The scoring model lives here**, not in Settings; the Settings
-  "Cover-letter model" is a separate choice for a different feature.
+- **`sources.dou` / `sources.djinni`** — the RSS feeds to collect from (both come
+  from the profile's role once one is set; §1). These are the only sources.
+- **`scorer.enabled` / `scorer.model`** — turn L1 scoring on/off and pin its model.
+  **Leave `model` blank** and a cheap default is chosen **per provider** (Anthropic →
+  Claude Haiku, OpenAI → `gpt-4o-mini`); set it only to override. It lives here, not
+  in Settings — scoring runs on every vacancy, so it stays a cheap set-and-forget,
+  separate from the Settings "Cover-letter model".
 - **`dedup_ttl_days`**, **`request_delay_seconds`**, **`webui`** (host / port /
   token), **`l0`** (the free pre-LLM filter).
 
-`scorer.api_key` / `scorer.provider` / `scorer.base_url` are **fallbacks only** — the
-Settings page overrides them (precedence **Settings → config.json → env**), so leave
-them empty once the key is set in the UI. There is no `telegram` section here.
+The **API key, provider and base URL are not here** — they live only on the Settings
+page (`profile.json`), the single place to set them. `config.json` has no `telegram`
+section and no `scorer.api_key` / `scorer.provider` / `scorer.base_url` either.
 
 ## 3. Check before running
 
 ```sh
-python3 -m jobradar check            # checks DOU, IMAP, the scorer and Telegram
+python3 -m jobradar check            # checks the DOU feeds, the scorer and Telegram
 python3 -m jobradar run --dry-run    # a full run, sends nothing
 python3 -m jobradar stats            # what got collected and what got filtered out
 python3 -m jobradar top --limit 20   # the best vacancies from the DB
@@ -262,8 +268,9 @@ it on a schedule every ~3 hours. Cron example (08:00–23:00):
 0 8-23/3 * * *  cd /path/to/jobradar && python -m jobradar run >> jobradar.log 2>&1
 ```
 
-A run holds a lock directory: if the previous one hung on IMAP, the next won't
-start and won't spawn duplicates; a lock older than an hour is removed automatically.
+A run holds a lock directory: if the previous one hung (e.g. on a slow feed), the
+next won't start and won't spawn duplicates; a lock older than an hour is removed
+automatically.
 
 > **Legacy:** this used to run on a Synology NAS via the DSM Task Scheduler
 > (`run.sh` every 3h). The NAS is off the table ([ADR-0012](docs/adr/0012-flask-jinja-adopt-drop-stdlib-runtime.md));
@@ -330,15 +337,13 @@ it "skipped". This is deliberate: over half a year both the vacancy and you chan
 
 ## 7. What to do when silence falls
 
-The script catches this itself: if no new vacancy appears within 24 hours, a
-"silence for 24h" message arrives. This almost always means one of two things:
+The script catches this itself: if no new vacancy appears within the silence window
+(default 24h; §1), a "silence for Nh" message arrives. It usually means a feed broke
+silently — a DOU or Djinni RSS layout change, or the feeds returning nothing.
 
-- a filter in the mailbox broke and alerts go past the `JobRadar` folder;
-- Djinni or LinkedIn changed the email layout.
-
-What to do: `python3 -m jobradar check` → if IMAP is OK but there are no
-vacancies, look at the raw email in the mailbox and check whether the link format
-changed (`DJINNI_JOB_RE` and `LINKEDIN_JOB_RE` in `core/collectors/email_alerts.py`).
+What to do: `python3 -m jobradar check` → if the DOU feeds are OK but there are no
+vacancies, open a feed URL in the browser and check whether the RSS shape changed
+(parsers: `core/collectors/dou.py` and `core/collectors/djinni.py`).
 
 ## 8. Tuning the threshold
 
@@ -355,8 +360,13 @@ you won't be able to compare them.
 
 ## 9. Privacy
 
-`config.json` holds the mailbox password (and the API key only if you use the
-config fallback instead of the Settings page); `profile.json` holds the key — and
-the Telegram credentials — when set via the UI. `chmod 600 config.json` is mandatory. `jobs.db`, `jobradar.log`
+`profile.json` holds the API key and the Telegram credentials (set via the Settings
+page) — the only files with secrets; `config.json` has none now (mailbox, keys and
+tokens all moved out). `chmod 600 profile.json` is wise. `jobs.db`, `jobradar.log`
 and `webui.log` hold no secrets, but they hold your job-search history — keep the
-directory out of shared folders.
+directory out of shared
+folders.
+
+## License
+
+[MIT](LICENSE).

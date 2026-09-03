@@ -15,7 +15,6 @@ API.
 
 import json
 import logging
-import os
 import re
 import time
 
@@ -24,8 +23,21 @@ from jobradar.core import llm
 log = logging.getLogger("jobradar")
 
 RUBRIC_VERSION = "v2"
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+# L1 scoring runs on EVERY vacancy that passes L0, so its default model is cheap/fast
+# and chosen per provider. Overridable via config.json `scorer.model` (blank = auto).
+DEFAULT_SCORER_MODELS = {
+    "anthropic": "claude-haiku-4-5-20251001",
+    "openai": "gpt-4o-mini",
+}
+DEFAULT_MODEL = DEFAULT_SCORER_MODELS["anthropic"]  # back-compat alias (Anthropic)
 API_URL = "https://api.anthropic.com/v1/messages"
+
+
+def default_scorer_model(provider):
+    """The cheap default scoring model for a provider (Anthropic → Haiku, OpenAI →
+    gpt-4o-mini). Unknown provider falls back to the Anthropic default."""
+    return DEFAULT_SCORER_MODELS.get(provider, DEFAULT_MODEL)
+
 
 SCORER_SYSTEM = """You are scoring how well a candidate fits a vacancy. Below are verified facts about the candidate.
 
@@ -165,41 +177,36 @@ class LlmScorer:
 AnthropicScorer = LlmScorer
 
 
-def llm_settings(cfg):
+def llm_settings():
     """(provider, base_url, api_key) for every LLM feature — scoring and cover
     letters share the account and provider; only the MODEL differs (scorer.model
     for L1, profile.llm_model for the letter).
 
-    Precedence, so a handed-off tool runs on the new owner's account: the user's
-    profile.json first, then config.json's scorer.*, then the environment.
+    The account lives ONLY in the profile (Settings page): there is no config.json
+    or environment fallback, so there is a single place to see and set the key.
     """
     from jobradar import candidate
 
     prof = candidate.load()
-    sc = cfg.get("scorer", {}) or {}
-    provider = prof.get("llm_provider") or sc.get("provider") or "anthropic"
-    base_url = prof.get("llm_base_url") or sc.get("base_url") or ""
-    api_key = (
-        prof.get("api_key")
-        or sc.get("api_key", "")
-        or os.environ.get("ANTHROPIC_API_KEY", "")
-    )
+    provider = prof.get("llm_provider") or "anthropic"
+    base_url = prof.get("llm_base_url", "")
+    api_key = prof.get("api_key", "")
     return provider, base_url, api_key
 
 
-def effective_api_key(cfg):
-    """Just the key (Profile → config → env). See llm_settings for the full set."""
-    return llm_settings(cfg)[2]
+def effective_api_key():
+    """Just the key (profile only). See llm_settings for the full set."""
+    return llm_settings()[2]
 
 
 def build_scorer(cfg, profile="", http_post=None):
     """Scorer from config: the real one (enabled + key) or NullScorer."""
     sc = cfg.get("scorer", {})
-    provider, base_url, api_key = llm_settings(cfg)
+    provider, base_url, api_key = llm_settings()
     if sc.get("enabled") and api_key:
         return LlmScorer(
             api_key,
-            sc.get("model", DEFAULT_MODEL),
+            sc.get("model") or default_scorer_model(provider),
             profile,
             int(sc.get("timeout_seconds", 60)),
             request_delay=float(cfg.get("request_delay_seconds", 2)),

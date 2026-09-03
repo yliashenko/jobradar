@@ -44,8 +44,6 @@ ERROR_HINTS = (
     ("HTTP Error 5", "the source had an internal error"),
     ("no such table", "the DB is missing a required table — a migration didn't run"),
     ("database is locked", "the DB is busy with another process"),
-    ("authentication failed", "the mailbox rejected the login or password"),
-    ("AUTHENTICATIONFAILED", "the mailbox rejected the login or password"),
 )
 
 

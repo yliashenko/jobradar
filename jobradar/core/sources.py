@@ -5,14 +5,14 @@ build_sources reads config and returns a list of sources (each a callable
 (report) -> [job]). For tests/e2e there's a fixture source:
 `sources.fixture = {"enabled": true, "path": …}` turns on reading ready-made
 vacancies from a JSON file instead of the network, and e2e seeds the app a known
-set without any IMAP/RSS.
+set without any RSS.
 """
 
 import json
 import logging
 from functools import partial
 
-from jobradar.core.collectors import djinni, dou, email_alerts
+from jobradar.core.collectors import djinni, dou
 
 log = logging.getLogger("jobradar")
 
@@ -29,27 +29,6 @@ def _fixture_source(path):
             jobs = []
         if report is not None:
             report.append({"feed": f"fixture: {path}", "count": len(jobs), "error": ""})
-        return jobs
-
-    return collect
-
-
-def _imap_source(imap_cfg, delay, http):
-    def collect(report=None):
-        jobs = email_alerts.collect_imap(
-            imap_cfg,
-            fetch_djinni_pages=bool(imap_cfg.get("fetch_djinni_pages", True)),
-            request_delay=delay,
-            http=http,
-        )
-        if report is not None:
-            report.append(
-                {
-                    "feed": f"email: folder {imap_cfg.get('folder', '')}",
-                    "count": len(jobs),
-                    "error": "",
-                }
-            )
         return jobs
 
     return collect
@@ -82,10 +61,6 @@ def build_sources(cfg, http=None):
                 http=http,
             )
         )
-
-    imap_cfg = sources_cfg.get("imap", {})
-    if imap_cfg.get("enabled"):
-        out.append(_imap_source(imap_cfg, delay, http))
 
     return out
 
