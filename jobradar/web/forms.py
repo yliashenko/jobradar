@@ -13,6 +13,43 @@ def _split(value: str) -> list[str]:
     return [t.strip() for t in re.split(r"[,\n]", value or "") if t.strip()]
 
 
+def _int(value, default: int) -> int:
+    """A whole-number form field with a fallback — blank/garbage keeps the default."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def _llm_endpoint() -> dict:
+    """Map the 3-way provider dropdown to the stored pair. Only 'custom' keeps a
+    base URL; Anthropic and plain OpenAI use their default endpoint, so any URL left
+    in the (hidden) field is dropped — no stale endpoint survives a provider switch."""
+    prov = request.form.get("llm_provider", "").strip()
+    base = request.form.get("llm_base_url", "").strip()
+    if prov == "custom":
+        return {"llm_provider": "openai", "llm_base_url": base}
+    if prov not in ("anthropic", "openai"):
+        prov = "anthropic"
+    return {"llm_provider": prov, "llm_base_url": ""}
+
+
+def _telegram_and_schedule() -> dict:
+    """The bot switch, notify threshold and auto-scan schedule — shared verbatim by
+    save and preview so a CV re-detect doesn't wipe them."""
+    return {
+        "telegram_bot_token": request.form.get("telegram_bot_token", "").strip(),
+        "telegram_chat_id": request.form.get("telegram_chat_id", "").strip(),
+        "telegram_enabled": request.form.get("telegram_enabled") == "on",
+        "notify_min_score": request.form.get("notify_min_score", "").strip(),
+        "heartbeat_alert_hours": _int(request.form.get("heartbeat_alert_hours"), 24),
+        "schedule_enabled": request.form.get("schedule_enabled") == "on",
+        "schedule_interval_hours": _int(request.form.get("schedule_interval_hours"), 3),
+        "schedule_start_hour": _int(request.form.get("schedule_start_hour"), 8),
+        "schedule_end_hour": _int(request.form.get("schedule_end_hour"), 23),
+    }
+
+
 def parse_hiring_update() -> dict | None:
     """A hiring-card POST: `stage` is the stage the textarea edits, `note` its
     text, `go` the stage a pressed button moves to (empty on a plain Save). The
@@ -55,17 +92,14 @@ def parse_profile_preview():
         "seniority": request.form.get("seniority", "") or parsed["seniority"],
         "exclude": _split(request.form.get("exclude", "")),
         "stack": _split(request.form.get("stack", "")),
-        # Carried through the preview round-trip so a skill re-detect doesn't wipe them.
-        "api_key": request.form.get("api_key", "").strip(),
-        "llm_model": request.form.get("llm_model", "").strip(),
-        "llm_provider": request.form.get("llm_provider", "").strip(),
-        "llm_base_url": request.form.get("llm_base_url", "").strip(),
     }
     return data, parsed
 
 
 def parse_profile_save() -> dict:
-    """Confirmed checkboxes plus manually added skills."""
+    """The candidate fields (Profile page): role, CV, skills, boundaries. LLM/
+    Telegram/schedule live on the Settings page and are parsed separately, so a
+    profile save never touches them."""
     picked = [s for s in request.form.getlist("skills") if s.strip()]
     extra = _split(request.form.get("extra", ""))
     return {
@@ -77,8 +111,15 @@ def parse_profile_save() -> dict:
         "stack": _split(request.form.get("stack", "")),
         "notes": request.form.get("notes", ""),
         "seniority": request.form.get("seniority", ""),
+    }
+
+
+def parse_settings_save() -> dict:
+    """The account/output fields (Settings page): LLM access, Telegram, auto-scan.
+    Kept apart from the profile fields so each page saves its own half."""
+    return {
         "api_key": request.form.get("api_key", "").strip(),
         "llm_model": request.form.get("llm_model", "").strip(),
-        "llm_provider": request.form.get("llm_provider", "").strip(),
-        "llm_base_url": request.form.get("llm_base_url", "").strip(),
+        **_llm_endpoint(),
+        **_telegram_and_schedule(),
     }

@@ -16,6 +16,7 @@ from flask import Flask
 from jobradar import paths
 from jobradar.config import setup_logging
 from jobradar.runner import Runner
+from jobradar.scheduler import Scheduler
 from jobradar.web.db import close_db
 from jobradar.web.filters import register_jinja
 from jobradar.web.routes import bp
@@ -37,7 +38,8 @@ def create_app(config: dict | None = None, runner=None) -> Flask:
     )
     cfg = config if config is not None else load_config()
     app.config["JOBRADAR"] = cfg
-    app.config["THRESHOLD"] = float(cfg.get("notify_min_score", 7))
+    # The notify/band threshold is resolved per-request now (Profile → config),
+    # so a change on the Profile page takes effect without a restart.
     app.config["TOKEN"] = (cfg.get("webui", {}) or {}).get("token", "")
     app.config["RUNNER"] = runner
 
@@ -67,7 +69,11 @@ def main() -> int:
     # A button-triggered scan must leave the same trace in the log as a
     # scheduled one — when something breaks, there's one file to read.
     setup_logging(verbose=False)
-    app = create_app(cfg, runner=Runner(cfg))
+    runner = Runner(cfg)
+    app = create_app(cfg, runner=runner)
+    # In-process auto-scan: fires only while this server is up, on the cadence set
+    # on the Profile page. Started here (not in create_app) so tests never spawn it.
+    Scheduler(runner).start()
 
     token = webui.get("token", "")
     suffix = f"?token={token}" if token else ""

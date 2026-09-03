@@ -1,12 +1,6 @@
 {
-  "notify_min_score": 7,
   "dedup_ttl_days": 180,
-  "heartbeat_alert_hours": 24,
   "request_delay_seconds": 2,
-  "telegram": {
-    "bot_token": "",
-    "chat_id": ""
-  },
   "webui": {
     "host": "0.0.0.0",
     "port": 8787,

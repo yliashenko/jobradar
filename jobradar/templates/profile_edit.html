@@ -29,18 +29,7 @@
   <h2>Boundaries & caveats {{ ui.tooltip('The scorer sees this, not the filter. Here is what the skills list hides: "Python is not a work language, but curated LLM code". Without it the score turns optimistic.') }}</h2>
   <textarea name="notes" rows="5" placeholder="Boundaries that must not blur…">{{ notes }}</textarea>
 
-  <h2>LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic or any OpenAI-compatible endpoint (OpenAI, a gateway, or a local Ollama via base URL). Priority over config.json; stays in profile.json (never committed). Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</h2>
-  <div class="llmgrid">
-    <label class="pfield"><span class="plabel">API key</span><input type="password" name="api_key" value="{{ api_key }}" placeholder="sk-ant-… / sk-…" autocomplete="off"></label>
-    <label class="pfield"><span class="plabel">Provider</span>
-      <select name="llm_provider">
-        <option value="anthropic"{% if llm_provider != 'openai' %} selected{% endif %}>Anthropic (default)</option>
-        <option value="openai"{% if llm_provider == 'openai' %} selected{% endif %}>OpenAI-compatible (OpenAI / gateway / local Ollama)</option>
-      </select>
-    </label>
-    <label class="pfield"><span class="plabel">API base URL</span><input type="text" name="llm_base_url" value="{{ llm_base_url }}" placeholder="empty = provider default · e.g. http://localhost:11434/v1" autocomplete="off"></label>
-    <label class="pfield"><span class="plabel">Cover-letter model</span><input type="text" name="llm_model" value="{{ llm_model }}" placeholder="claude-sonnet-5 / gpt-4o" autocomplete="off"></label>
-  </div>
+  <p class="hint">LLM access, Telegram and auto-scan moved to <a href="{{ settings_link(false, token) }}">Settings</a>.</p>
 
   <div class="prow save">
     <button name="action" value="save">Save</button>

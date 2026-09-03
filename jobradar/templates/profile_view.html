@@ -35,8 +35,6 @@
   <h2>Boundaries & caveats {{ ui.tooltip('The scorer sees this, not the filter — nuances the skills list hides.') }}</h2>
   <p class="notes">{% if notes_html %}{{ notes_html }}{% else %}<span class="muted">not set</span>{% endif %}</p>
 
-  <h2>LLM access {{ ui.tooltip('Your own API key powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM). Provider picks Anthropic or an OpenAI-compatible endpoint. The model below is the cover-letter model; scoring keeps its own in config. Set them in Edit.') }}</h2>
-  {% if not api_key_set %}<p class="pcallout">No API key set — <b>vacancy scoring</b> and <b>cover-letter generation</b> are unavailable. <a href="{{ profile_link(true, token) }}">Add a key</a> to enable them. The rest of the radar (collection, L0 filtering, triage) works without it.</p>{% endif %}
-  <p class="pmeta">{% if api_key_set %}<b class="co">key set</b>{% else %}<span class="muted">no key</span>{% endif %} · provider: {{ llm_provider }}{% if llm_base_url %} · {{ llm_base_url }}{% endif %} · cover-letter model: {% if llm_model %}{{ llm_model }}{% else %}<span class="muted">default (claude-sonnet-5)</span>{% endif %}</p>
+  <p class="hint">LLM access, Telegram and auto-scan live in <a href="{{ settings_link(false, token) }}">Settings</a>.</p>
 </div>
 {% endblock %}

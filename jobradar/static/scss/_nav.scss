@@ -178,6 +178,20 @@ form.filters {
   padding-bottom: 0.7rem;
 }
 
+/* Reset-all link, shown only when a filter is active. A quiet text control, not
+   a second solid button competing with Apply. */
+.clearfilters {
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 0.32rem 0.2rem;
+}
+.clearfilters:hover {
+  color: var(--accent);
+}
+
 /* Picker popup (tags / companies): search + sections + multiselect + Apply. */
 .pick {
   position: relative;

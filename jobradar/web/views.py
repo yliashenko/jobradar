@@ -13,6 +13,7 @@ from markupsafe import Markup, escape
 
 from jobradar import candidate as profile_data
 from jobradar import clock, paths, roles, runner, skills, stats
+from jobradar.core import cover
 from jobradar.core.db import KEEP_DUPS_FOR_RUNS
 from jobradar.core.dedup import normalize_key
 from jobradar.web.constants import STATUS_LABELS
@@ -701,12 +702,16 @@ def _filters(conn, params):
         for r in conn.execute("SELECT DISTINCT source FROM jobs ORDER BY source")
     ]
     applied = params.get("status", "new") == "applied"
+    # Anything that narrows the feed — the tab (status) and sort order are view
+    # state, not filters, so clearing keeps them.
+    filter_keys = ("source", "q", "min", "l0", "days", "tech", "notech", "co")
     return {
         "sources": sources,
         "sort": _effective_sort(params),
         "sort_opts": APPLIED_SORT_OPTS if applied else SORT_OPTS,
         "days_opts": DAYS_OPTS,
         "score_opts": SCORE_OPTS,
+        "filters_active": any(params.get(k) for k in filter_keys),
     }
 
 
@@ -1055,7 +1060,26 @@ def profile_view_context(params, data, saved) -> dict:
         "llm_model": data.get("llm_model", ""),
         "llm_provider": data.get("llm_provider", "") or "anthropic",
         "llm_base_url": data.get("llm_base_url", ""),
+        "telegram_bot_token_set": bool(data.get("telegram_bot_token")),
+        "telegram_chat_id": data.get("telegram_chat_id", ""),
+        "telegram_enabled": data.get("telegram_enabled", True),
+        "notify_min_score": str(data.get("notify_min_score", "")).strip(),
+        "heartbeat_alert_hours": data.get("heartbeat_alert_hours", 24),
+        "schedule_enabled": data.get("schedule_enabled", False),
+        "schedule_interval_hours": data.get("schedule_interval_hours", 3),
+        "schedule_start_hour": data.get("schedule_start_hour", 8),
+        "schedule_end_hour": data.get("schedule_end_hour", 23),
     }
+
+
+def _provider_ui(data) -> str:
+    """Which provider option to preselect: anthropic / openai / custom. 'custom' is
+    the stored openai + a base URL — a distinct UI state so the base-URL field can
+    hide for Anthropic and plain OpenAI (which use their own default endpoint)."""
+    prov = data.get("llm_provider", "") or "anthropic"
+    if prov == "openai" and str(data.get("llm_base_url", "")).strip():
+        return "custom"
+    return prov
 
 
 def profile_edit_context(params, data, preview=None) -> dict:
@@ -1082,7 +1106,21 @@ def profile_edit_context(params, data, preview=None) -> dict:
         "notes": data.get("notes", ""),
         "api_key": data.get("api_key", ""),
         "llm_model": data.get("llm_model", ""),
-        "llm_provider": data.get("llm_provider", "") or "anthropic",
+        # The provider dropdown is a 3-way UI (anthropic / openai / custom); "custom"
+        # is stored as provider=openai + a base URL, and the base-URL field shows only
+        # for it. Derive which option to preselect from the stored pair.
+        "provider_ui": _provider_ui(data),
         "llm_base_url": data.get("llm_base_url", ""),
+        "cover_models": cover.COVER_MODEL_CHOICES,
+        "cover_model_known": (data.get("llm_model", "") or "") in cover.COVER_MODEL_IDS,
+        "telegram_bot_token": data.get("telegram_bot_token", ""),
+        "telegram_chat_id": data.get("telegram_chat_id", ""),
+        "telegram_enabled": data.get("telegram_enabled", True),
+        "notify_min_score": data.get("notify_min_score", ""),
+        "heartbeat_alert_hours": data.get("heartbeat_alert_hours", 24),
+        "schedule_enabled": data.get("schedule_enabled", False),
+        "schedule_interval_hours": data.get("schedule_interval_hours", 3),
+        "schedule_start_hour": data.get("schedule_start_hour", 8),
+        "schedule_end_hour": data.get("schedule_end_hour", 23),
         "has_profile": os.path.exists(paths.profile_json_path()),
     }

@@ -1,0 +1,115 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - group [ref=e5]:
+        - generic "menu" [ref=e6] [cursor=pointer]
+      - heading [level=1] [ref=e10]:
+        - link "jobradar" [ref=e11] [cursor=pointer]:
+          - /url: /
+      - link "Profile" [ref=e13] [cursor=pointer]:
+        - /url: /profile
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - heading "Specialization" [level=2] [ref=e19]
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]:
+          - radio "QA" [ref=e22]
+          - text: QA
+        - generic [ref=e23] [cursor=pointer]:
+          - radio "QA Automation" [checked] [ref=e24]
+          - text: QA Automation
+        - generic [ref=e25] [cursor=pointer]:
+          - radio "Frontend" [ref=e26]
+          - text: Frontend
+        - generic [ref=e27] [cursor=pointer]:
+          - radio "Backend" [ref=e28]
+          - text: Backend
+      - heading "Stack ?" [level=2] [ref=e29]:
+        - text: Stack
+        - generic [ref=e30]: "?"
+      - textbox "e.g. Playwright, TypeScript, Cypress" [ref=e31]
+      - heading "Seniority ?" [level=2] [ref=e32]:
+        - text: Seniority
+        - generic [ref=e33]: "?"
+      - textbox "Senior / Middle / Lead" [ref=e34]
+      - heading "CV ?" [level=2] [ref=e35]:
+        - text: CV
+        - generic [ref=e36]: "?"
+      - link "Add CV" [ref=e38] [cursor=pointer]:
+        - /url: "#cvmodal"
+      - heading "Add a skill ?" [level=2] [ref=e39]:
+        - text: Add a skill
+        - generic [ref=e40]: "?"
+      - textbox "e.g. Scrum, HTTP, RestAssured" [ref=e41]
+      - heading "Not for me ?" [level=2] [ref=e42]:
+        - text: Not for me
+        - generic [ref=e43]: "?"
+      - textbox "e.g. manual testing, game testing" [ref=e44]
+      - heading "Boundaries & caveats ?" [level=2] [ref=e45]:
+        - text: Boundaries & caveats
+        - generic [ref=e46]: "?"
+      - textbox "Boundaries that must not blur…" [ref=e47]
+      - heading "LLM access ?" [level=2] [ref=e48]:
+        - text: LLM access
+        - generic [ref=e49]: "?"
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]: API key
+          - textbox "API key" [ref=e53]:
+            - /placeholder: sk-ant-… / sk-…
+        - generic [ref=e54]:
+          - generic [ref=e55]: Provider
+          - combobox "Provider" [ref=e56]:
+            - option "Anthropic" [selected]
+            - option "OpenAI"
+            - option "Other — OpenAI-compatible endpoint (gateway / local Ollama)"
+        - generic [ref=e57]:
+          - generic [ref=e58]: Cover-letter model
+          - combobox "Cover-letter model" [ref=e59]:
+            - option "Default (Claude Sonnet 5)" [selected]
+            - option "Claude Opus 5 — most capable"
+            - option "Claude Sonnet 5 — balanced (default)"
+            - option "Claude Haiku 4.5 — fast & cheap"
+            - option "GPT-4o"
+            - option "GPT-4o mini"
+      - heading "Telegram ?" [level=2] [ref=e60]:
+        - text: Telegram
+        - generic [ref=e61]: "?"
+      - generic [ref=e62]:
+        - checkbox "Send matches to Telegram ?" [checked] [ref=e63]
+        - text: Send matches to Telegram
+        - generic [ref=e64]: "?"
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]: Bot token
+          - textbox "Bot token" [ref=e68]:
+            - /placeholder: 123456789:AA… — from @BotFather → /newbot
+        - generic [ref=e69]:
+          - generic [ref=e70]: Chat ID
+          - textbox "Chat ID" [ref=e71]:
+            - /placeholder: e.g. 123456789 — from …/getUpdates after you message the bot
+        - generic [ref=e72]:
+          - generic [ref=e73]: Notify threshold
+          - spinbutton "Notify threshold" [ref=e74]
+        - generic [ref=e75]:
+          - generic [ref=e76]: Silence alert (hours)
+          - spinbutton "Silence alert (hours)" [ref=e77]: "24"
+      - heading "Auto-scan ?" [level=2] [ref=e78]:
+        - text: Auto-scan
+        - generic [ref=e79]: "?"
+      - generic [ref=e80]:
+        - checkbox "Auto-scan while the app is open" [ref=e81]
+        - text: Auto-scan while the app is open
+      - generic [ref=e82]:
+        - generic [ref=e83]:
+          - generic [ref=e84]: Every (hours)
+          - spinbutton "Every (hours)" [ref=e85]: "3"
+        - generic [ref=e86]:
+          - generic [ref=e87]: Active from (hour)
+          - spinbutton "Active from (hour)" [ref=e88]: "8"
+        - generic [ref=e89]:
+          - generic [ref=e90]: Active until (hour)
+          - spinbutton "Active until (hour)" [ref=e91]: "23"
+      - generic [ref=e92]:
+        - button "Save" [ref=e93] [cursor=pointer]
+        - button "Save & Scan" [ref=e94] [cursor=pointer]

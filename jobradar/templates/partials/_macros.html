@@ -42,7 +42,7 @@
     <a class="modal-close" href="#" aria-label="Close">×</a>
     <h3>Add an API key to use this</h3>
     <p>Vacancy <b>scoring</b> and <b>cover-letter generation</b> run on an LLM — they are the only features that need a key. Collection, L0 filtering, dedup and triage all work without one.</p>
-    <p>Add your key (Anthropic or an OpenAI-compatible provider) in <a href="{{ profile_link(true, token) }}">Profile → LLM access</a> to turn them on.</p>
+    <p>Add your key (Anthropic or an OpenAI-compatible provider) in <a href="{{ settings_link(true, token) }}">Settings → LLM access</a> to turn them on.</p>
   </div>
 </div>
 {% endmacro %}
@@ -62,7 +62,7 @@
 <details class="menu account-menu">
   <summary aria-label="account menu" title="Account">{{ ACCOUNT_ICON }}</summary>
   <nav>
-    {% for label, path, key in [('Profile', '/profile', 'profile')] %}
+    {% for label, path, key in [('Profile', '/profile', 'profile'), ('Settings', '/settings', 'settings')] %}
     <a{% if key == active %} class="on"{% endif %} href="{{ page_link(path, params) }}" data-testid="account-link" data-page="{{ key }}">{{ label }}</a>
     {% endfor %}
   </nav>
@@ -197,5 +197,6 @@
   </form>
   {{ pick_tags_popup(pick_tags, params) }}
   {{ pick_companies_popup(pick_companies, params) }}
+  {% if f.filters_active %}<a class="clearfilters" href="{{ feed_link(params, source='', q='', min='', l0='', days='', tech='', notech='', co='') }}" title="Reset every filter (keeps the current tab and sort)">Clear filters</a>{% endif %}
 </div>
 {% endmacro %}

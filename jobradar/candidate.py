@@ -58,6 +58,25 @@ def default_profile():
         "llm_model": "",
         "llm_provider": "",
         "llm_base_url": "",
+        # Telegram output channel — the SINGLE source for these settings (config.json
+        # no longer carries a telegram section). bot_token from @BotFather, chat_id
+        # from getUpdates once you've messaged the bot; personal data, never committed.
+        "telegram_bot_token": "",
+        "telegram_chat_id": "",
+        # Master switch for the bot: off → scans still score & store, nothing is
+        # pushed to Telegram (heartbeat included). notify_min_score is the minimum
+        # score that gets pushed ("" = the built-in default of 7); heartbeat_alert_hours
+        # is the silence window before the "nothing new" alert (kept — CLAUDE.md §4).
+        "telegram_enabled": True,
+        "notify_min_score": "",
+        "heartbeat_alert_hours": 24,
+        # In-process auto-scan: fires only while `serve` is up (it is not a system
+        # service). Interval in hours, gated to an active-hours window so there are
+        # no night pings; shares the run lock, so it never overlaps the button.
+        "schedule_enabled": False,
+        "schedule_interval_hours": 3,
+        "schedule_start_hour": 8,
+        "schedule_end_hour": 23,
     }
 
 
