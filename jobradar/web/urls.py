@@ -118,9 +118,17 @@ def calendar_link(params, year, month):
 
 
 def profile_link(edit, token):
+    return _page_edit_link("/profile", edit, token)
+
+
+def settings_link(edit, token):
+    return _page_edit_link("/settings", edit, token)
+
+
+def _page_edit_link(path, edit, token):
     query = {}
     if edit:
         query["edit"] = "1"
     if token:
         query["token"] = token
-    return "/profile" + ("?" + urllib.parse.urlencode(query) if query else "")
+    return path + ("?" + urllib.parse.urlencode(query) if query else "")

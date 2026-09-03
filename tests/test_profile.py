@@ -84,6 +84,26 @@ def render_profile_view(data):
     )
 
 
+def render_settings_edit(data):
+    return render_tpl(
+        "settings_edit.html",
+        title="",
+        active="settings",
+        params={},
+        **views.profile_edit_context({}, data),
+    )
+
+
+def render_settings_view(data):
+    return render_tpl(
+        "settings_view.html",
+        title="",
+        active="settings",
+        params={},
+        **views.profile_view_context({}, data, False),
+    )
+
+
 def render_calendar(conn, params):
     return render_tpl(
         "calendar.html",
@@ -275,7 +295,7 @@ class TestProfilePage:
             html = render_profile_edit(profile.default_profile())
             for key in roles.ROLE_ORDER:
                 assert (f'name="role" value="{key}"') in html, key
-            assert "account-menu" in html
+            assert 'data-testid="account-link"' in html
             assert 'data-page="profile"' in html
 
     def test_preview_highlights_skills_in_cv_text(self):
@@ -406,6 +426,57 @@ class TestCrudStates:
             assert 'href="/profile?edit=1"' in html
             assert 'name="tech" value="Playwright"' in html and "Show vacancies" in html
             assert "no Python" in html
+
+    def test_settings_post_persists_telegram_fields(self):
+        # Through the real route: form → parse_settings_save → profile.json.
+        with tempfile.TemporaryDirectory() as tmp:
+            client = self._client(tmp)
+            client.post(
+                "/settings",
+                data={
+                    "action": "save",
+                    "telegram_bot_token": "123456789:AA-secret",
+                    "telegram_chat_id": "555",
+                },
+            )
+            data = profile.load()
+            assert data["telegram_bot_token"] == "123456789:AA-secret"
+            assert data["telegram_chat_id"] == "555"
+
+    def test_settings_save_keeps_profile_fields(self):
+        # The two pages own separate halves of profile.json: saving settings must
+        # not wipe the candidate fields, and vice versa.
+        with tempfile.TemporaryDirectory() as tmp:
+            client = self._client(tmp)
+            profile.save(
+                {
+                    "role": "qa_automation",
+                    "cv_text": "Playwright",
+                    "skills": ["Playwright"],
+                    "notes": "no Python",
+                }
+            )
+            client.post(
+                "/settings",
+                data={"action": "save", "telegram_chat_id": "555"},
+            )
+            data = profile.load()
+            assert data["telegram_chat_id"] == "555"
+            assert data["skills"] == ["Playwright"] and data["notes"] == "no Python"
+            # And a later profile save keeps the settings just written.
+            client.post(
+                "/profile",
+                data={
+                    "action": "save",
+                    "role": "qa_automation",
+                    "cv_text": "Playwright",
+                    "skills": "Playwright",
+                    "notes": "still no Python",
+                },
+            )
+            data = profile.load()
+            assert data["telegram_chat_id"] == "555"
+            assert data["notes"] == "still no Python"
 
     def test_edit_param_forces_form(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1509,3 +1580,193 @@ def test_llm_access_defaults_empty(tmp_path):
     paths.use_home(str(tmp_path))
     data = profile.default_profile()
     assert data["api_key"] == "" and data["llm_model"] == ""
+
+
+def test_cover_letter_model_is_a_dropdown(tmp_path):
+    paths.use_home(str(tmp_path))
+    html = render_settings_edit(profile.default_profile())
+    # A curated <select>, not a free-text field.
+    assert '<select name="llm_model">' in html
+    assert '<input type="text" name="llm_model"' not in html
+    assert "Default (Claude Sonnet 5)" in html
+    assert 'value="claude-opus-5"' in html and 'value="claude-haiku-4-5"' in html
+
+
+def test_cover_letter_model_marks_the_current_choice(tmp_path):
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["llm_model"] = "claude-opus-5"
+    assert 'value="claude-opus-5" selected' in render_settings_edit(data)
+
+
+def test_cover_letter_model_keeps_an_unknown_value(tmp_path):
+    # A custom/legacy id (e.g. carried from config.json) must not silently vanish.
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["llm_model"] = "claude-haiku-4-5-20251001"
+    html = render_settings_edit(data)
+    assert 'value="claude-haiku-4-5-20251001" selected' in html and "(current)" in html
+
+
+def _save_via_client(tmp_path, **fields):
+    """POST settings through the real route, then return the reloaded profile.
+    LLM access lives on the Settings page now."""
+    paths.use_home(str(tmp_path))
+    client = _app().test_client()
+    client.post("/settings", data={"action": "save", **fields})
+    return profile.load()
+
+
+def test_provider_custom_stores_openai_with_base_url(tmp_path):
+    d = _save_via_client(
+        tmp_path, llm_provider="custom", llm_base_url="http://localhost:11434/v1"
+    )
+    assert d["llm_provider"] == "openai"
+    assert d["llm_base_url"] == "http://localhost:11434/v1"
+
+
+def test_provider_openai_clears_base_url(tmp_path):
+    # Plain OpenAI uses its default endpoint — a stale hidden URL must be dropped.
+    d = _save_via_client(tmp_path, llm_provider="openai", llm_base_url="http://stale")
+    assert d["llm_provider"] == "openai" and d["llm_base_url"] == ""
+
+
+def test_provider_anthropic_clears_base_url(tmp_path):
+    d = _save_via_client(
+        tmp_path, llm_provider="anthropic", llm_base_url="http://stale"
+    )
+    assert d["llm_provider"] == "anthropic" and d["llm_base_url"] == ""
+
+
+def test_provider_ui_derives_custom_from_openai_plus_base():
+    assert (
+        views._provider_ui({"llm_provider": "openai", "llm_base_url": "http://x"})
+        == "custom"
+    )
+    assert (
+        views._provider_ui({"llm_provider": "openai", "llm_base_url": ""}) == "openai"
+    )
+    assert views._provider_ui({"llm_provider": "anthropic"}) == "anthropic"
+
+
+def test_edit_page_has_three_providers_and_hideable_base_url(tmp_path):
+    paths.use_home(str(tmp_path))
+    html = render_settings_edit(profile.default_profile())
+    assert 'value="anthropic"' in html
+    assert 'value="openai"' in html
+    assert 'value="custom"' in html
+    # The base-URL field carries the class the CSS uses to hide it per provider.
+    assert "baseurl-field" in html
+
+
+def test_telegram_fields_round_trip(tmp_path):
+    """bot_token + chat_id persist in profile.json (per-account output channel)."""
+    paths.use_home(str(tmp_path))
+    profile.save(
+        {
+            "role": "qa_automation",
+            "telegram_bot_token": "123456789:AA-token",
+            "telegram_chat_id": "111222333",
+        }
+    )
+    data = profile.load()
+    assert data["telegram_bot_token"] == "123456789:AA-token"
+    assert data["telegram_chat_id"] == "111222333"
+
+
+def test_telegram_fields_default_empty(tmp_path):
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    assert data["telegram_bot_token"] == "" and data["telegram_chat_id"] == ""
+
+
+def test_edit_page_has_telegram_fields(tmp_path):
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["telegram_bot_token"] = "123:AA"
+    data["telegram_chat_id"] = "999"
+    html = render_settings_edit(data)
+    assert 'name="telegram_bot_token"' in html and 'name="telegram_chat_id"' in html
+    assert 'value="999"' in html  # chat id round-trips into the form
+    assert "@BotFather" in html  # bot-creation help is present
+
+
+def test_view_page_shows_telegram_status(tmp_path):
+    paths.use_home(str(tmp_path))
+    # No token → the "not delivered" callout shows.
+    no = render_settings_view(profile.default_profile())
+    assert "no bot token" in no and "not delivered to Telegram" in no
+    # With a token → status flips to "set", chat id is shown.
+    data = profile.default_profile()
+    data["telegram_bot_token"] = "123:AA"
+    data["telegram_chat_id"] = "999"
+    yes = render_settings_view(data)
+    assert "bot token set" in yes and "999" in yes
+
+
+def test_bot_and_schedule_fields_round_trip(tmp_path):
+    """Master switch, notify threshold and auto-scan schedule persist and keep type."""
+    paths.use_home(str(tmp_path))
+    profile.save(
+        {
+            "role": "qa_automation",
+            "telegram_enabled": False,
+            "notify_min_score": "8",
+            "heartbeat_alert_hours": 48,
+            "schedule_enabled": True,
+            "schedule_interval_hours": 6,
+            "schedule_start_hour": 9,
+            "schedule_end_hour": 21,
+        }
+    )
+    d = profile.load()
+    assert d["telegram_enabled"] is False and d["notify_min_score"] == "8"
+    assert d["heartbeat_alert_hours"] == 48
+    assert d["schedule_enabled"] is True and d["schedule_interval_hours"] == 6
+    assert d["schedule_start_hour"] == 9 and d["schedule_end_hour"] == 21
+
+
+def test_bot_and_schedule_defaults(tmp_path):
+    paths.use_home(str(tmp_path))
+    d = profile.default_profile()
+    assert d["telegram_enabled"] is True and d["notify_min_score"] == ""
+    assert d["heartbeat_alert_hours"] == 24
+    assert d["schedule_enabled"] is False and d["schedule_interval_hours"] == 3
+
+
+def test_edit_page_has_bot_and_schedule_controls(tmp_path):
+    paths.use_home(str(tmp_path))
+    html = render_settings_edit(profile.default_profile())
+    assert 'name="telegram_enabled"' in html and 'name="notify_min_score"' in html
+    assert 'name="heartbeat_alert_hours"' in html
+    assert 'name="schedule_enabled"' in html
+    assert 'name="schedule_interval_hours"' in html
+    assert "Auto-scan" in html
+
+
+def test_settings_hour_fields_are_selects(tmp_path):
+    # Numeric hour/threshold inputs are dropdowns now, not free-typed numbers.
+    paths.use_home(str(tmp_path))
+    html = render_settings_edit(profile.default_profile())
+    for name in (
+        "notify_min_score",
+        "heartbeat_alert_hours",
+        "schedule_interval_hours",
+        "schedule_start_hour",
+        "schedule_end_hour",
+    ):
+        assert f'<select name="{name}"' in html, name
+    # The active-window selectors read as clock times, not bare integers.
+    assert "08:00" in html and "23:00" in html
+
+
+def test_view_page_shows_schedule_status(tmp_path):
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["schedule_enabled"] = True
+    data["schedule_interval_hours"] = 4
+    data["schedule_start_hour"] = 8
+    data["schedule_end_hour"] = 22
+    html = render_settings_view(data)
+    assert "Auto-scan" in html and "every 4h" in html
+    assert "08:00" in html and "22:00" in html  # zero-padded active window

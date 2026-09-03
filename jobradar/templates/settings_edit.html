@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui %}
+{% block content %}
+<form class="profile settings" method="post" action="/settings">
+  {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
+
+  <h2>LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic, OpenAI, or a custom OpenAI-compatible endpoint (a gateway or local Ollama) — the base URL field appears only for that last one. Priority over config.json; stays in profile.json (never committed). Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</h2>
+  <div class="llmgrid">
+    <label class="pfield"><span class="plabel">API key</span><input type="password" name="api_key" value="{{ api_key }}" placeholder="sk-ant-… / sk-…" autocomplete="off"></label>
+    <label class="pfield"><span class="plabel">Provider</span>
+      <select name="llm_provider">
+        <option value="anthropic"{% if provider_ui == 'anthropic' %} selected{% endif %}>Anthropic</option>
+        <option value="openai"{% if provider_ui == 'openai' %} selected{% endif %}>OpenAI</option>
+        <option value="custom"{% if provider_ui == 'custom' %} selected{% endif %}>Other — OpenAI-compatible endpoint (gateway / local Ollama)</option>
+      </select>
+    </label>
+    <label class="pfield baseurl-field"><span class="plabel">API base URL {{ ui.tooltip('The endpoint requests are sent to. Only needed for a custom OpenAI-compatible endpoint — an OpenAI-compatible gateway/proxy or a local Ollama (http://localhost:11434/v1). Anthropic and plain OpenAI have their own default URL, so this field is hidden for them.') }}</span><input type="text" name="llm_base_url" value="{{ llm_base_url }}" placeholder="e.g. http://localhost:11434/v1" autocomplete="off"></label>
+    <label class="pfield"><span class="plabel">Cover-letter model</span>
+      <select name="llm_model">
+        <option value=""{% if not llm_model %} selected{% endif %}>Default (Claude Sonnet 5)</option>
+        {% if llm_model and not cover_model_known %}<option value="{{ llm_model }}" selected>{{ llm_model }} (current)</option>{% endif %}
+        {% for group, opts in cover_models %}<optgroup label="{{ group }}">{% for mid, label in opts %}<option value="{{ mid }}"{% if mid == llm_model %} selected{% endif %}>{{ label }}</option>{% endfor %}</optgroup>{% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <h2>Telegram {{ ui.tooltip('Where matches (score ≥ Notify threshold) and the silence heartbeat are sent. BOT TOKEN: in Telegram message @BotFather → /newbot → copy the token (looks like 123456789:AA…). CHAT ID: message your new bot anything, then open https://api.telegram.org/bot<token>/getUpdates and copy the number in "chat":{"id":…}. Silence alert: hours of no new vacancy before a "nothing new" ping (a broken parser looks like an empty market). These settings live ONLY here (per-account, in profile.json, never committed) — config.json has no telegram section.') }}</h2>
+  <label class="ptoggle"><input type="checkbox" name="telegram_enabled"{% if telegram_enabled %} checked{% endif %}> Send matches to Telegram {{ ui.tooltip('Off → scans still score and store (the web feed shows scores), but nothing is pushed to Telegram, heartbeat included.') }}</label>
+  <div class="llmgrid">
+    <label class="pfield"><span class="plabel">Bot token</span><input type="password" name="telegram_bot_token" value="{{ telegram_bot_token }}" placeholder="123456789:AA… — from @BotFather → /newbot" autocomplete="off"></label>
+    <label class="pfield"><span class="plabel">Chat ID</span><input type="text" name="telegram_chat_id" value="{{ telegram_chat_id }}" placeholder="e.g. 123456789 — from …/getUpdates after you message the bot" autocomplete="off"></label>
+    <label class="pfield"><span class="plabel">Notify threshold</span>
+      <select name="notify_min_score">
+        <option value=""{% if not notify_min_score %} selected{% endif %}>default (7)</option>
+        {% for n in range(0, 11) %}<option value="{{ n }}"{% if notify_min_score|string == n|string %} selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield"><span class="plabel">Silence alert (hours)</span>
+      <select name="heartbeat_alert_hours">
+        {% for h in range(0, 25) %}<option value="{{ h }}"{% if heartbeat_alert_hours|int == h %} selected{% endif %}>{{ h }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule WHILE this web app is up — it is not a system service, so closing the server stops it (for always-on, use cron/launchd instead). Interval in hours, only within the active-hours window so there are no night pings. Shares the run lock with the button, so scans never overlap.') }}</h2>
+  <label class="ptoggle"><input type="checkbox" name="schedule_enabled"{% if schedule_enabled %} checked{% endif %}> Auto-scan while the app is open</label>
+  <div class="llmgrid">
+    <label class="pfield"><span class="plabel">Every (hours)</span>
+      <select name="schedule_interval_hours">
+        {% for h in range(1, 25) %}<option value="{{ h }}"{% if schedule_interval_hours|int == h %} selected{% endif %}>{{ h }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield"><span class="plabel">Active from</span>
+      <select name="schedule_start_hour">
+        {% for h in range(0, 24) %}<option value="{{ h }}"{% if schedule_start_hour|int == h %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield"><span class="plabel">Active until</span>
+      <select name="schedule_end_hour">
+        {% for h in range(1, 25) %}<option value="{{ h }}"{% if schedule_end_hour|int == h %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="prow save">
+    <button name="action" value="save">Save</button>
+    <button name="action" value="save_scan" class="primary">Save & Scan</button>
+    {% if has_profile %}<a class="editlink" href="{{ settings_link(false, token) }}">Cancel</a>{% endif %}
+  </div>
+</form>
+{% endblock %}

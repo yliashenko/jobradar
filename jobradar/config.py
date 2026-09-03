@@ -30,11 +30,9 @@ def load_config():
     with open(paths.config_path(), encoding="utf-8") as fh:
         cfg = json.load(fh)
     problems = []
-    tg = cfg.get("telegram", {})
-    if not tg.get("bot_token"):
-        problems.append("telegram.bot_token is empty")
-    if not tg.get("chat_id"):
-        problems.append("telegram.chat_id is empty")
+    # Telegram (bot_token/chat_id/enabled), the notify threshold and the heartbeat
+    # window now live only in the profile (set on the Profile page); the web UI and
+    # `jobradar check` surface a missing bot, so config.json no longer validates it.
     if cfg.get("sources", {}).get("imap", {}).get("enabled"):
         im = cfg["sources"]["imap"]
         for field in ("host", "user", "password"):

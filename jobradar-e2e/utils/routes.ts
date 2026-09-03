@@ -5,6 +5,7 @@ export const Routes = {
   status: '/status',
   run: '/run',
   profile: '/profile',
+  settings: '/settings',
   tags: '/tags',
   stats: '/stats',
   runs: '/runs',

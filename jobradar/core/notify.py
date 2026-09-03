@@ -13,6 +13,52 @@ from jobradar.core.text import escape
 log = logging.getLogger("jobradar")
 
 
+# These read the profile as the SINGLE source of truth — config.json no longer
+# carries telegram credentials, the notify threshold or the heartbeat window (one
+# settings home, edited on the Profile page).
+
+
+def effective_telegram():
+    """(bot_token, chat_id) for the output channel, from profile.json. bot_token
+    from @BotFather, chat_id from getUpdates; personal data, never committed."""
+    from jobradar import candidate
+
+    prof = candidate.load()
+    return prof.get("telegram_bot_token", ""), prof.get("telegram_chat_id", "")
+
+
+def telegram_enabled():
+    """The bot master switch (default on). Off → pipeline scores and stores as
+    usual but pushes nothing to Telegram. `check` still probes."""
+    from jobradar import candidate
+
+    return bool(candidate.load().get("telegram_enabled", True))
+
+
+def effective_threshold():
+    """Notify cutoff (default 7). A vacancy is pushed when its score is ≥ this;
+    the web feed bands against the same number."""
+    from jobradar import candidate
+
+    raw = str(candidate.load().get("notify_min_score", "")).strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return 7.0
+
+
+def heartbeat_hours():
+    """Silence window before the "nothing new" alert (default 24h; CLAUDE.md §4)."""
+    from jobradar import candidate
+
+    try:
+        return int(candidate.load().get("heartbeat_alert_hours", 24))
+    except (TypeError, ValueError):
+        return 24
+
+
 def telegram_send(bot_token, chat_id, text, dry_run, http_post=None):
     if dry_run:
         print(

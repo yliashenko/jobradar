@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/server';
 import { ProfilePage } from '../../pages/profile.page';
+import { Routes } from '../../utils/routes';
 
 test.describe('Profile', () => {
   let profile: ProfilePage;
@@ -94,13 +95,14 @@ test.describe('Profile', () => {
     await expect(page.locator(`input[name="role"][value="${value}"]`)).toBeChecked();
   });
 
-  test('the LLM config is saved in the profile @regression', async ({ page }) => {
-    await profile.open();
+  // LLM access moved to the Settings page (Profile now holds only the candidate).
+  test('the LLM config is saved in settings @regression', async ({ page }) => {
+    await page.goto(Routes.settings);
     await page.locator('select[name="llm_provider"]').selectOption('openai');
-    await page.locator('input[name="llm_model"]').fill('gpt-4o');
-    await profile.save();
-    await page.goto('/profile?edit=1');
+    await page.locator('input[name="api_key"]').fill('sk-test-123');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.goto(`${Routes.settings}?edit=1`);
     await expect(page.locator('select[name="llm_provider"]')).toHaveValue('openai');
-    await expect(page.locator('input[name="llm_model"]')).toHaveValue('gpt-4o');
+    await expect(page.locator('input[name="api_key"]')).toHaveValue('sk-test-123');
   });
 });

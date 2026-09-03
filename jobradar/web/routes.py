@@ -25,6 +25,7 @@ from jobradar import paths
 from jobradar.core.cover import DEFAULT_MODEL as COVER_MODEL
 from jobradar.core.cover import generate_cover, load_facts
 from jobradar.core.db import now_iso
+from jobradar.core.notify import effective_threshold
 from jobradar.core.scoring import llm_settings
 from jobradar.web import views
 from jobradar.web.auth import require_token
@@ -35,6 +36,7 @@ from jobradar.web.forms import (
     parse_hiring_update,
     parse_profile_preview,
     parse_profile_save,
+    parse_settings_save,
 )
 
 bp = Blueprint("web", __name__)
@@ -101,7 +103,7 @@ def feed():
         active="feed",
         params=params,
         **views.feed_context(
-            conn, params, current_app.config["THRESHOLD"], _run_status(), _query()
+            conn, params, effective_threshold(), _run_status(), _query()
         ),
     )
 
@@ -119,7 +121,7 @@ def company():
         active="",
         params=params,
         query=_query(),
-        **views.company_context(conn, params, current_app.config["THRESHOLD"]),
+        **views.company_context(conn, params, effective_threshold()),
     )
 
 
@@ -151,6 +153,34 @@ def _render_profile(params, data, preview=None, saved=False):
         )
     return render_template(
         "profile_view.html",
+        **kwargs,
+        **views.profile_view_context(params, data, saved),
+    )
+
+
+@bp.route("/settings", methods=["GET", "POST"])
+def settings():
+    if request.method == "POST":
+        return _handle_settings()
+    params = _params()
+    require_token(params.get("token", ""))
+    return _render_settings(
+        params, profile_data.load(), saved=(params.get("saved") == "1")
+    )
+
+
+def _render_settings(params, data, saved=False):
+    """LLM access, Telegram and auto-scan. Same VIEW/EDIT states as the profile:
+    no settings file yet → EDIT; ?edit=1 forces EDIT; otherwise VIEW. The context
+    is a superset of what these templates read (shared with the profile page)."""
+    editing = params.get("edit") == "1" or not os.path.exists(paths.profile_json_path())
+    kwargs = {"title": "settings", "active": "settings", "params": params}
+    if editing:
+        return render_template(
+            "settings_edit.html", **kwargs, **views.profile_edit_context(params, data)
+        )
+    return render_template(
+        "settings_view.html",
         **kwargs,
         **views.profile_view_context(params, data, saved),
     )
@@ -341,7 +371,7 @@ def hiring_cover():
     if not api_key:
         return jsonify(
             ok=False,
-            error="No API key. Add your API key in Profile → LLM access "
+            error="No API key. Add your API key in Settings → LLM access "
             "(or set scorer.api_key / ANTHROPIC_API_KEY).",
         )
     # The cover-letter model is the profile's llm_model (scoring keeps its own).
@@ -387,11 +417,34 @@ def _handle_profile():
         data, parsed = parse_profile_preview()
         return _render_profile(params, data, preview=parsed)
 
-    profile_data.save(parse_profile_save())
+    _save_partial(parse_profile_save())
+    return _after_save(action, token, "/profile")
+
+
+def _handle_settings():
+    token = request.form.get("token", "")
+    require_token(token)
+    action = request.form.get("action", "save")
+    _save_partial(parse_settings_save())
+    return _after_save(action, token, "/settings")
+
+
+def _save_partial(fields: dict) -> None:
+    """Merge a page's fields into the stored profile and save. The Profile and
+    Settings pages each own half of profile.json; merging over what's on disk lets
+    either page save without wiping the other's fields."""
+    data = profile_data.load()
+    data.update(fields)
+    profile_data.save(data)
+
+
+def _after_save(action, token, page):
+    """Redirect after a save: 'save_scan' kicks a scan and lands on the feed;
+    a plain save returns to the page with the saved flag."""
     runner = current_app.config.get("RUNNER")
     if action == "save_scan" and runner is not None:
         runner.trigger()
         suffix = "token=" + urllib.parse.quote(token) if token else ""
         return redirect("/?" + suffix, code=303)
     suffix = "&token=" + urllib.parse.quote(token) if token else ""
-    return redirect("/profile?saved=1" + suffix, code=303)
+    return redirect(f"{page}?saved=1" + suffix, code=303)

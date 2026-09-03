@@ -37,6 +37,29 @@
   gap: 0.7rem;
   max-width: 30rem;
 }
+/* A settings switch: a checkbox on the same line as its label (the checkbox must
+   escape the full-width .pfield input rule). */
+.profile .ptoggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 30rem;
+  margin: 0.6rem 0;
+  font-size: 0.9rem;
+}
+.profile .ptoggle input {
+  width: auto;
+  margin: 0;
+  flex: none;
+}
+/* API base URL only matters for a custom OpenAI-compatible endpoint; Anthropic and
+   plain OpenAI have their own default URL. Hide the field when either is the picked
+   provider — :has() reads the live <select>, so no JS. Default is visible, so the
+   field never disappears where :has() is unsupported. */
+.profile .llmgrid:has(select[name="llm_provider"] option[value="anthropic"]:checked) .baseurl-field,
+.profile .llmgrid:has(select[name="llm_provider"] option[value="openai"]:checked) .baseurl-field {
+  display: none;
+}
 .profile .pfield {
   display: block;
   margin: 0;

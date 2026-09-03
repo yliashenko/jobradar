@@ -13,7 +13,7 @@ from jobradar.config import load_config, setup_logging
 from jobradar.core import pipeline
 from jobradar.core.db import db_connect, meta_get
 from jobradar.core.http import http_get
-from jobradar.core.notify import telegram_send
+from jobradar.core.notify import effective_telegram, telegram_send
 from jobradar.core.scoring import DEFAULT_MODEL, llm_settings, load_profile, score_job
 
 
@@ -91,9 +91,10 @@ def cmd_check(cfg, args):
     else:
         print("SCORER   disabled or no key — notifications will go out without a score")
 
+    bot_token, chat_id = effective_telegram()
     if telegram_send(
-        cfg["telegram"]["bot_token"],
-        cfg["telegram"]["chat_id"],
+        bot_token,
+        chat_id,
         "✅ jobradar: connectivity check",
         args.dry_run,
     ):

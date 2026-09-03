@@ -168,6 +168,53 @@ class TestScorerSeam:
         assert captured["url"] == scoring.API_URL
 
 
+class TestTelegramSettings:
+    """Telegram creds, notify threshold and heartbeat window come ONLY from the
+    profile now — config.json carries none of them."""
+
+    def test_telegram_creds_from_profile(self, tmp_path):
+        paths.use_home(str(tmp_path))
+        from jobradar import candidate
+        from jobradar.core.notify import effective_telegram
+
+        assert effective_telegram() == ("", "")  # no profile → empty
+        candidate.save(
+            {
+                "role": "qa_automation",
+                "telegram_bot_token": "prof-token",
+                "telegram_chat_id": "111",
+            }
+        )
+        assert effective_telegram() == ("prof-token", "111")
+
+    def test_threshold_from_profile_else_default(self, tmp_path):
+        paths.use_home(str(tmp_path))
+        from jobradar import candidate
+        from jobradar.core.notify import effective_threshold
+
+        assert effective_threshold() == 7.0  # no profile → built-in default
+        candidate.save({"role": "qa_automation", "notify_min_score": "8"})
+        assert effective_threshold() == 8.0
+
+    def test_bot_master_switch(self, tmp_path):
+        paths.use_home(str(tmp_path))
+        from jobradar import candidate
+        from jobradar.core.notify import telegram_enabled
+
+        assert telegram_enabled() is True  # default on
+        candidate.save({"role": "qa_automation", "telegram_enabled": False})
+        assert telegram_enabled() is False
+
+    def test_heartbeat_hours_from_profile_else_default(self, tmp_path):
+        paths.use_home(str(tmp_path))
+        from jobradar import candidate
+        from jobradar.core.notify import heartbeat_hours
+
+        assert heartbeat_hours() == 24  # default
+        candidate.save({"role": "qa_automation", "heartbeat_alert_hours": 48})
+        assert heartbeat_hours() == 48
+
+
 class _FakeScorer:
     """Фіксований бал без мережі (вимога #3)."""
 
@@ -234,6 +281,39 @@ class TestPipelineRun:
         assert run["added"] == 1
         # воронка сходиться
         assert run["fetched"] == run["dup_skipped"] + run["l0_dropped"] + run["added"]
+
+    def test_disabled_bot_stores_score_but_sends_nothing(self, tmp_path):
+        paths.use_home(tmp_path)
+        from jobradar import candidate
+
+        candidate.save({"role": "qa_automation", "telegram_enabled": False})
+        path = _write_fixture(
+            tmp_path,
+            [
+                {
+                    "source": "dou",
+                    "url": "u1",
+                    "title": "Senior QA Engineer",
+                    "company": "A",
+                    "location": "",
+                    "salary": "",
+                    "description": "QA",
+                }
+            ],
+        )
+        sent = []
+        pipeline.run(
+            self._cfg(path),
+            _Args(),
+            scorer=_FakeScorer(9.0),
+            notify=lambda *a: sent.append(a) or True,
+        )
+        from jobradar.core.db import db_connect
+
+        # Nothing pushed to Telegram, but the score is still stored for the web feed.
+        assert sent == []
+        row = db_connect().execute("SELECT score FROM jobs").fetchone()
+        assert row["score"] == 9.0
 
     def test_second_run_is_all_dupes(self, tmp_path):
         paths.use_home(tmp_path)

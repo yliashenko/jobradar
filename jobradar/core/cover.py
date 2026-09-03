@@ -24,6 +24,34 @@ from jobradar import paths
 from jobradar.core import llm
 
 DEFAULT_MODEL = "claude-sonnet-5"
+
+# The cover-letter model the Profile page offers as a dropdown (no free-text): a
+# short curated list, grouped by provider, rather than every model that exists.
+# Empty value = the default (config cover_letter.model → DEFAULT_MODEL). Anthropic
+# ids per the current model list; OpenAI-compatible covers the base-URL path.
+COVER_MODEL_CHOICES = (
+    (
+        "Anthropic",
+        (
+            ("claude-opus-5", "Claude Opus 5 — most capable"),
+            ("claude-sonnet-5", "Claude Sonnet 5 — balanced (default)"),
+            ("claude-haiku-4-5", "Claude Haiku 4.5 — fast & cheap"),
+        ),
+    ),
+    (
+        "OpenAI-compatible",
+        (
+            ("gpt-4o", "GPT-4o"),
+            ("gpt-4o-mini", "GPT-4o mini"),
+        ),
+    ),
+)
+
+# Flat set of the selectable ids, so the view can tell a known pick from a custom
+# value carried over from config.json / an older profile (kept, not dropped).
+COVER_MODEL_IDS = frozenset(
+    mid for _group, opts in COVER_MODEL_CHOICES for mid, _label in opts
+)
 # Budget for shallow (effort:low) thinking plus the JSON output — letter +
 # evaluation + traceability. That fits in a few thousand tokens; the headroom just
 # avoids a mid-letter cut on a long posting. A big cap here is what let default

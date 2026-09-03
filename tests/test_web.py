@@ -112,6 +112,7 @@ class TestPages:
             "/calendar",
             "/company?name=Ciklum",
             "/profile",
+            "/settings",
         ],
     )
     def test_page_ok(self, client, path):
@@ -193,21 +194,20 @@ class TestActions:
         assert resp.status_code == 303
         assert "/profile?saved=1" in resp.headers["Location"]
 
-    def test_profile_edit_has_llm_access_fields(self, client):
-        html = client.get("/profile?edit=1").get_data(as_text=True)
+    def test_settings_edit_has_llm_access_fields(self, client):
+        html = client.get("/settings?edit=1").get_data(as_text=True)
         assert 'name="api_key"' in html and 'name="llm_model"' in html
 
-    def test_profile_save_persists_llm_access(self, client):
+    def test_settings_save_persists_llm_access(self, client):
         client.post(
-            "/profile",
+            "/settings",
             data={
                 "action": "save",
-                "role": "qa_automation",
                 "api_key": "sk-ant-1",
                 "llm_model": "claude-sonnet-5",
             },
         )
-        view = client.get("/profile").get_data(as_text=True)
+        view = client.get("/settings").get_data(as_text=True)
         assert "key set" in view
         assert "claude-sonnet-5" in view
 
@@ -517,7 +517,7 @@ class TestCoverLetter:
         client, _ = self._client(tmp_path, monkeypatch, api_key="")
         body = client.post("/hiring/cover", data={"hash": "h1"}).get_json()
         assert body["ok"] is False and "API key" in body["error"]
-        assert "Profile" in body["error"]  # points the user where to set it
+        assert "Settings" in body["error"]  # points the user where to set it
 
     def test_profile_key_and_model_take_priority(self, tmp_path, monkeypatch):
         # config has no key; the key/model come from the profile (own-account use).

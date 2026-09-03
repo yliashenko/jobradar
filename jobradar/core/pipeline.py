@@ -22,7 +22,14 @@ from jobradar.core.db import (
 )
 from jobradar.core.dedup import job_hash
 from jobradar.core.filters import l0_filter
-from jobradar.core.notify import format_notification, telegram_send
+from jobradar.core.notify import (
+    effective_telegram,
+    effective_threshold,
+    format_notification,
+    heartbeat_hours,
+    telegram_enabled,
+    telegram_send,
+)
 from jobradar.core.scoring import (
     RUBRIC_VERSION,
     build_scorer,
@@ -54,7 +61,7 @@ def run(cfg, args, http=None, scorer=None, notify=None):
 
     counters["notified"] = _score_and_notify(conn, cfg, new_jobs, args, scorer, notify)
     run_finish(conn, run_id, feeds, counters)
-    heartbeat(conn, cfg, args.dry_run, notify)
+    heartbeat(conn, args.dry_run, notify)
     conn.close()
     return 0
 
@@ -158,7 +165,13 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
         api_key = effective_api_key(cfg)
         profile = load_profile() if (scorer_cfg.get("enabled") and api_key) else ""
         scorer = build_scorer(cfg, profile=profile)
-    threshold = float(cfg.get("notify_min_score", 7))
+    threshold = effective_threshold()
+    bot_token, chat_id = effective_telegram()
+    notify_on = telegram_enabled()
+    # Silent failure is the top risk (CLAUDE.md §4): if the bot is on but has no
+    # token, matches would vanish with no trace — say so in the log.
+    if notify_on and new_jobs and not (bot_token and chat_id):
+        log.warning("Telegram is on but not configured — matches won't be delivered")
 
     sent = 0
     for job in new_jobs:
@@ -179,6 +192,10 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
                 ),
             )
             conn.commit()
+        # The bot master switch is off: the score is stored (the web feed still
+        # shows it), but nothing goes to Telegram.
+        if not notify_on:
+            continue
         if row["score"] is not None and row["score"] < threshold:
             log.info(
                 "Below threshold (%.1f < %.1f): %s",
@@ -188,9 +205,7 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
             )
             continue
         text = format_notification(job, row)
-        if notify(
-            cfg["telegram"]["bot_token"], cfg["telegram"]["chat_id"], text, args.dry_run
-        ):
+        if notify(bot_token, chat_id, text, args.dry_run):
             sent += 1
             if not args.dry_run:
                 conn.execute(
@@ -202,13 +217,14 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
     return sent
 
 
-def heartbeat(conn, cfg, dry_run, notify=telegram_send):
+def heartbeat(conn, dry_run, notify=telegram_send):
     """If there's been NOTHING new for a long time — suspect a silent parser failure.
 
     24h without a new record → a signal to Telegram (CLAUDE.md §4). Don't remove
-    it when refactoring: an empty feed and a broken parser look identical.
+    it when refactoring: an empty feed and a broken parser look identical. The
+    window is a profile setting (heartbeat_hours), not config.json.
     """
-    hours = int(cfg.get("heartbeat_alert_hours", 24))
+    hours = heartbeat_hours()
     last_new = meta_get(conn, "last_new_job_at", "")
     last_alert = meta_get(conn, "last_heartbeat_alert", "")
     now = clock.now()
@@ -234,5 +250,8 @@ def heartbeat(conn, cfg, dry_run, notify=telegram_send):
         "empty, or the parser broke silently (the email layout changed / the mail filter).\n"
         f"Total in the DB: {total}."
     )
-    if notify(cfg["telegram"]["bot_token"], cfg["telegram"]["chat_id"], text, dry_run):
+    if not telegram_enabled():
+        return
+    bot_token, chat_id = effective_telegram()
+    if notify(bot_token, chat_id, text, dry_run):
         meta_set(conn, "last_heartbeat_alert", now_iso())

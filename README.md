@@ -26,8 +26,13 @@ and per-card cover-letter generation.
 
 **Profile (`/profile`)** — the single source of truth for scoring: paste a CV and the
 parser highlights recognised skills; you confirm them, add skills that need not be in
-the CV, and write the "boundaries" block that keeps the LLM honest. Also holds the
-LLM API key, provider and cover-letter model.
+the CV, add a "Stack" of technologies to scan deeper on, and write the "boundaries"
+block that keeps the LLM honest.
+
+**Settings (`/settings`)** — everything account- and output-related in one place: the
+LLM key / provider / cover-letter model, the Telegram bot (token, chat ID, on/off,
+notify threshold, silence alert), and the auto-scan schedule. Stored per-account in
+`profile.json` (never committed). Full walkthrough in **§1** below.
 
 **Stats (`/stats`)** — how you fit the market: coverage for the target role, a
 skill-gap table, vacancies by source, and a Djinni salary comparison — all computed
@@ -97,15 +102,18 @@ Also for more information see [detailed artifact](https://claude.ai/code/artifac
 git clone <this-repo> && cd job-radar
 make install                       # venv + dev dependencies
 
-cp config.example.json config.json # fill in 4 fields — see §3 below
+cp config.example.json config.json # mailbox + machine settings — see §2 below
 cp profile.example.md profile.md   # or build the profile in the web UI
 
 make serve                         # web UI at http://localhost:8787
 python -m jobradar run --dry-run   # one full scan, sends nothing
 ```
 
-The full operational setup — Telegram bot, mailbox alerts, scheduling — is in
-§1–§10 below.
+Then open the web UI and set up the **Settings page** (LLM key, Telegram bot,
+auto-scan) — the one place for all account and output config (**§1**).
+
+The full operational setup — the **Settings page** (LLM, Telegram, auto-scan) and
+scheduling — is in **§1** and **§4** below.
 
 ## Running the tests
 
@@ -157,31 +165,81 @@ visible in `python -m jobradar top` too.
 
 ---
 
-## 1. Telegram bot
+## 1. Settings page — LLM, scoring, Telegram, auto-scan
 
-1. In Telegram message `@BotFather` → `/newbot` → you get a `bot_token`.
-2. Message your bot anything (without this it isn't allowed to message you).
-3. Open `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` — in the response
-   find `"chat":{"id":123456789}`. That's your `chat_id`.
+Everything account- and output-related is on **one screen**: open the web UI, then
+**account menu → Settings** (or go to `/settings`). It's stored per-account in
+`profile.json` (never committed) and overrides `config.json`. Three blocks:
 
-## 2. Config
+### LLM access
+
+Powers the two LLM features — vacancy **scoring** and **cover-letter** generation.
+(L0 filtering and skill detection are rule-based, so the radar collects and filters
+with no key at all.)
+
+- **API key** — your Anthropic (`sk-ant-…`) or OpenAI-compatible key.
+- **Provider** — **Anthropic** (default), **OpenAI**, or **Other** (an
+  OpenAI-compatible gateway or a local Ollama). The **API base URL** field appears
+  **only for _Other_** — Anthropic and plain OpenAI use their own default endpoint.
+- **Cover-letter model** — a dropdown (default Claude Sonnet 5). This is *only* the
+  cover-letter model; **L1 scoring keeps its own cheaper model** in `config.json`
+  (`scorer.model`, Claude Haiku by default — see §2).
+
+Precedence for the key/provider: **Settings → `config.json` (`scorer.*`) → the
+`ANTHROPIC_API_KEY` env var**. No key → the pipeline still runs and just sends
+everything that passed L0 (handy for the first week, before you pay for scoring).
+
+### Telegram bot
+
+**Create the bot once** (outside the app):
+
+1. In Telegram, message `@BotFather` → `/newbot` → copy the **`bot_token`** (looks
+   like `123456789:AA…`).
+2. Message your new bot anything — it can't message you until you do.
+3. Open `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` and copy the number in
+   `"chat":{"id":123456789}` — that's your **`chat_id`**.
+
+**Then on the Settings page:**
+
+- **Send matches to Telegram** — the master on/off. Off → scans still score and
+  store (visible in the feed), but nothing is pushed.
+- **Bot token** / **Chat ID** — paste the two values from above.
+- **Notify threshold** — the minimum score that gets pushed to Telegram (default 7;
+  tuning it in §8).
+- **Silence alert (hours)** — hours with no new vacancy before a "nothing new" ping.
+  A broken parser looks exactly like an empty market, so this is the tripwire
+  (default 24; §7).
+
+### Auto-scan (in-app schedule)
+
+- **Auto-scan while the app is open** — the running web server triggers a scan on a
+  schedule. It fires **only while `serve` is up** (it is not a system service).
+- **Every** / **Active from–until** — the interval in hours, gated to an
+  active-hours window so there are no night pings. It shares the run lock with the
+  Scan button, so scans never overlap. For always-on scheduling instead, use
+  cron/launchd — **§4**.
+
+## 2. config.json — what's left in the file
 
 ```sh
 cp config.example.json config.json
 chmod 600 config.json
 ```
 
-You need to fill in 4 fields: `telegram.bot_token`, `telegram.chat_id`,
-`sources.imap.user`, `sources.imap.password`. The rest is already tuned.
+Account and output settings live on the **Settings page** (§1). What stays in
+`config.json` is machine-level:
 
-The **LLM API key** (for scoring and cover letters) is set on the **Profile page**
-in the web UI — stored per-account in `profile.json`, not in `config.json`. As a
-fallback the pipeline also reads `scorer.api_key` from `config.json` or the
-`ANTHROPIC_API_KEY` environment variable; precedence is **Profile → config → env**.
+- **`sources.imap.user` / `sources.imap.password`** — the mailbox for Djinni/LinkedIn
+  email alerts. Skip if you only use DOU RSS (`sources.imap.enabled: false`).
+- **`scorer.enabled` / `scorer.model`** — turn L1 scoring on/off and pick its (cheap)
+  model. **The scoring model lives here**, not in Settings; the Settings
+  "Cover-letter model" is a separate choice for a different feature.
+- **`dedup_ttl_days`**, **`request_delay_seconds`**, **`webui`** (host / port /
+  token), **`l0`** (the free pre-LLM filter).
 
-If `scorer.enabled: false` or there's no key — the pipeline works without the LLM
-and sends everything that passed L0. Handy for the first week: you'll see how much
-noise L0 lets through and tune the regexes before paying for scoring.
+`scorer.api_key` / `scorer.provider` / `scorer.base_url` are **fallbacks only** — the
+Settings page overrides them (precedence **Settings → config.json → env**), so leave
+them empty once the key is set in the UI. There is no `telegram` section here.
 
 ## 3. Check before running
 
@@ -210,6 +268,11 @@ start and won't spawn duplicates; a lock older than an hour is removed automatic
 > **Legacy:** this used to run on a Synology NAS via the DSM Task Scheduler
 > (`run.sh` every 3h). The NAS is off the table ([ADR-0012](docs/adr/0012-flask-jinja-adopt-drop-stdlib-runtime.md));
 > any cron / systemd-timer on the host where the project lives will do.
+
+For a no-cron setup, the **Settings page** has an **Auto-scan** toggle (§1): the
+running web server triggers scans on the configured cadence, sharing the run lock so
+it never overlaps the button. It fires only while `serve` is up — for always-on,
+prefer the cron/launchd approach above.
 
 ## 5. Web UI
 
@@ -279,10 +342,11 @@ changed (`DJINNI_JOB_RE` and `LINKEDIN_JOB_RE` in `core/collectors/email_alerts.
 
 ## 8. Tuning the threshold
 
-`notify_min_score: 7` is the starting value. For the first week set it to `6` and
-watch `python -m jobradar top`: if vacancies at 6.0–6.5 regularly look interesting
-— lower the threshold, if not — raise it to 7.5. A score isn't recomputed for
-already-scored vacancies, so changing the threshold affects only new ones.
+The **Notify threshold** on the Settings page (§1) is the send cutoff — default 7.
+For the first week set it to `6` and watch `python -m jobradar top`: if vacancies at
+6.0–6.5 regularly look interesting — lower it, if not — raise it to 7.5. A score
+isn't recomputed for already-scored vacancies, so a threshold change affects only
+new ones.
 
 If you change the rubric in `SCORER_SYSTEM` or the facts in your profile
 (`profile.json`, or its `profile.md` fallback) — change `RUBRIC_VERSION` in
@@ -292,7 +356,7 @@ you won't be able to compare them.
 ## 9. Privacy
 
 `config.json` holds the mailbox password (and the API key only if you use the
-config fallback instead of the Profile page); `profile.json` holds the key when
-set via the UI. `chmod 600 config.json` is mandatory. `jobs.db`, `jobradar.log`
+config fallback instead of the Settings page); `profile.json` holds the key — and
+the Telegram credentials — when set via the UI. `chmod 600 config.json` is mandatory. `jobs.db`, `jobradar.log`
 and `webui.log` hold no secrets, but they hold your job-search history — keep the
 directory out of shared folders.
