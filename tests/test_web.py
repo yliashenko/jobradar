@@ -448,8 +448,11 @@ class TestCoverLetter:
             return dict(_FAKE_COVER)
 
         monkeypatch.setattr(routes, "generate_cover", _fake_generate)
-        cfg = {"scorer": {"api_key": api_key}} if api_key else {}
-        client = create_app(config=cfg, runner=None).test_client()
+        if api_key:
+            from jobradar import candidate
+
+            candidate.save({"role": "qa_automation", "api_key": api_key})
+        client = create_app(config={}, runner=None).test_client()
         return client, captured
 
     def test_generate_saves_and_returns(self, tmp_path, monkeypatch):
@@ -573,8 +576,11 @@ class TestKeylessUI:
         )
         conn.commit()
         conn.close()
-        cfg = {"scorer": {"api_key": api_key}} if api_key else {}
-        return create_app(config=cfg, runner=None).test_client()
+        if api_key:
+            from jobradar import candidate
+
+            candidate.save({"role": "qa_automation", "api_key": api_key})
+        return create_app(config={}, runner=None).test_client()
 
     def test_no_key_shows_score_gate(self, tmp_path):
         html = self._client(tmp_path).get("/?status=all").get_data(as_text=True)

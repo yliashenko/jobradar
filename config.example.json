@@ -8,10 +8,7 @@
   },
   "scorer": {
     "enabled": true,
-    "api_key": "",
-    "provider": "anthropic",
-    "base_url": "",
-    "model": "claude-haiku-4-5-20251001",
+    "model": "",
     "timeout_seconds": 60
   },
   "cover_letter": {
@@ -38,17 +35,6 @@
         "https://djinni.co/jobs/rss/?primary_keyword=QA",
         "https://djinni.co/jobs/rss/?primary_keyword=Automation%20QA"
       ]
-    },
-    "imap": {
-      "enabled": true,
-      "host": "imap.gmail.com",
-      "port": 993,
-      "user": "",
-      "password": "",
-      "folder": "JobRadar",
-      "lookback_days": 3,
-      "mark_seen": true,
-      "fetch_djinni_pages": true
     }
   },
   "l0": {

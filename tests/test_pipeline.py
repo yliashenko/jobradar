@@ -64,27 +64,34 @@ class TestScorerSeam:
         assert isinstance(scorer, scoring.NullScorer)
         assert scorer.score({"title": "x"})["score"] is None
 
-    def test_enabled_with_key_gives_anthropic(self):
-        scorer = scoring.build_scorer(
-            {"scorer": {"enabled": True, "api_key": "k"}}, profile="p"
-        )
+    def test_enabled_with_profile_key_gives_anthropic(self, tmp_path):
+        paths.use_home(str(tmp_path))
+        from jobradar import candidate
+
+        candidate.save({"role": "qa_automation", "api_key": "k"})
+        scorer = scoring.build_scorer({"scorer": {"enabled": True}}, profile="p")
         assert isinstance(scorer, scoring.AnthropicScorer)
 
-    def test_profile_api_key_wins_over_config(self, tmp_path):
-        # Own-account use: the profile key powers scoring, not just cover letters.
+    def test_api_key_comes_from_profile(self, tmp_path):
+        # The profile is the single source; scoring runs on the user's own account.
         paths.use_home(str(tmp_path))
         from jobradar import candidate
 
         candidate.save({"role": "qa_automation", "api_key": "profile-key"})
-        key = scoring.effective_api_key({"scorer": {"api_key": "config-key"}})
-        assert key == "profile-key"
+        assert scoring.effective_api_key() == "profile-key"
 
-    def test_effective_api_key_falls_back_to_config(self, tmp_path):
-        paths.use_home(str(tmp_path))  # no profile.json → no profile key
-        key = scoring.effective_api_key({"scorer": {"api_key": "config-key"}})
-        assert key == "config-key"
+    def test_no_config_or_env_fallback(self, tmp_path, monkeypatch):
+        # Single source: neither config.json scorer.api_key nor ANTHROPIC_API_KEY
+        # is read — no profile key means no key (→ NullScorer, no scoring).
+        paths.use_home(str(tmp_path))  # no profile.json
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "env-key")
+        assert scoring.effective_api_key() == ""
+        assert isinstance(
+            scoring.build_scorer({"scorer": {"enabled": True, "api_key": "cfg-key"}}),
+            scoring.NullScorer,
+        )
 
-    def test_profile_key_enables_scorer_without_config_key(self, tmp_path):
+    def test_profile_key_enables_scorer(self, tmp_path):
         paths.use_home(str(tmp_path))
         from jobradar import candidate
 
@@ -92,6 +99,25 @@ class TestScorerSeam:
         scorer = scoring.build_scorer({"scorer": {"enabled": True}}, profile="p")
         assert isinstance(scorer, scoring.AnthropicScorer)
         assert scorer.api_key == "profile-key"
+
+    def test_scorer_model_defaults_per_provider(self, tmp_path):
+        # Blank config model → cheap default chosen by the profile's provider.
+        paths.use_home(str(tmp_path))
+        from jobradar import candidate
+
+        candidate.save({"role": "qa_automation", "api_key": "k"})  # anthropic default
+        anthropic = scoring.build_scorer({"scorer": {"enabled": True, "model": ""}})
+        assert anthropic.model == "claude-haiku-4-5-20251001"
+
+        candidate.save(
+            {"role": "qa_automation", "api_key": "k", "llm_provider": "openai"}
+        )
+        openai = scoring.build_scorer({"scorer": {"enabled": True, "model": ""}})
+        assert openai.model == "gpt-4o-mini"
+
+        # An explicit config model still wins over the per-provider default.
+        pinned = scoring.build_scorer({"scorer": {"enabled": True, "model": "gpt-4o"}})
+        assert pinned.model == "gpt-4o"
 
     def test_parse_response_strips_markdown_fence(self):
         row = scoring.parse_scorer_response(
@@ -124,7 +150,7 @@ class TestScorerSeam:
         assert row["score"] == 6.0
         assert cap["url"].endswith("/chat/completions")
 
-    def test_llm_settings_profile_provider_wins(self, tmp_path):
+    def test_llm_settings_from_profile_only(self, tmp_path):
         paths.use_home(str(tmp_path))
         from jobradar import candidate
 
@@ -136,9 +162,7 @@ class TestScorerSeam:
                 "llm_base_url": "http://localhost:11434/v1",
             }
         )
-        provider, base_url, api_key = scoring.llm_settings(
-            {"scorer": {"provider": "anthropic", "api_key": "ck"}}
-        )
+        provider, base_url, api_key = scoring.llm_settings()
         assert provider == "openai"
         assert base_url == "http://localhost:11434/v1"
         assert api_key == "pk"

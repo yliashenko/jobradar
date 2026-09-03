@@ -2,7 +2,7 @@
 
 The 'value → string' layer, almost no HTML. The exception is
 paragraphs_from_text (flat description → <p>/<ul> for records without
-description_html and for email), which builds escaped markup.
+description_html), which builds escaped markup.
 """
 
 import json
@@ -78,7 +78,7 @@ def row_get(row, key, default=""):
 
 
 def row_text(row):
-    """Vacancy text for tag matching. Flat description isn't always there (email),
+    """Vacancy text for tag matching. Flat description isn't always there, and
     markup isn't either (old records) — take what exists. One function for both
     the card tags and the filter, so a tag on a card and in the filter mean the same."""
     plain = row_get(row, "description") or re.sub(
@@ -89,7 +89,7 @@ def row_text(row):
 
 def paragraphs_from_text(text, limit=DESCRIPTION_HTML_LIMIT):
     """Flat description → paragraphs and lists. Fallback for records collected
-    before description_html existed, and for email (no markup at all)."""
+    before description_html existed (no markup at all)."""
     content = (text or "")[:limit]
     out, bullets = [], []
 

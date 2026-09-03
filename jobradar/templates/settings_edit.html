@@ -4,7 +4,7 @@
 <form class="profile settings" method="post" action="/settings">
   {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
 
-  <h2>LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic, OpenAI, or a custom OpenAI-compatible endpoint (a gateway or local Ollama) — the base URL field appears only for that last one. Priority over config.json; stays in profile.json (never committed). Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</h2>
+  <h2>LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic, OpenAI, or a custom OpenAI-compatible endpoint (a gateway or local Ollama) — the base URL field appears only for that last one. This is the ONLY place the key lives (profile.json, never committed) — no config.json or env fallback. Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</h2>
   <div class="llmgrid">
     <label class="pfield"><span class="plabel">API key</span><input type="password" name="api_key" value="{{ api_key }}" placeholder="sk-ant-… / sk-…" autocomplete="off"></label>
     <label class="pfield"><span class="plabel">Provider</span>

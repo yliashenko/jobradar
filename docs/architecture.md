@@ -17,7 +17,7 @@
 | Шаблони | **Jinja2** (`templates/` + макроси) | HTML у шаблонах, не в `.py` |
 | Стилі | **SCSS → `app.css`** (libsass, 12 партіалів) | джерело в `static/scss/`, віддається готовий CSS |
 | База | **SQLite** (`sqlite3`, stdlib) | один файл `jobs.db`, без сервера БД |
-| Джерела | `urllib` + `xml.etree` + `html.parser` | DOU RSS, Djinni RSS/API, IMAP-листи |
+| Джерела | `urllib` + `xml.etree` + `html.parser` | DOU RSS, Djinni RSS/API |
 | Скоринг | **Anthropic LLM** через власний HTTP-шар | L1-оцінка проти профілю кандидата |
 | Сповіщення | **Telegram Bot API** через `urllib` | нові вакансії в чат |
 | CLI | `argparse` (`python -m jobradar …`) | run / check / stats / top / serve |
@@ -67,7 +67,7 @@ jobradar/
 │
 ├── core/                ── КОНВЕЄР ЗБОРУ Й ОЦІНКИ (чиста логіка) ──
 │   ├── pipeline.py        воронка run(): збір → дедуп → L0 → скоринг → нотифай
-│   ├── collectors/        dou.py · djinni.py · email_alerts.py (парсери джерел)
+│   ├── collectors/        dou.py · djinni.py (парсери джерел)
 │   ├── sources.py         абстракція джерела (підмінна — seam)
 │   ├── http.py            HTTP-шар з інжектованим post/get (seam)
 │   ├── dedup.py           normalize_key + job_hash (ключ дедупу)
@@ -107,7 +107,7 @@ jobradar/
 ```
 runner.Runner.trigger()            single-flight: лок не дає двом прогонам збігтися
   └─ core.pipeline.run():
-       collectors (DOU / Djinni / email)      →  дедуп (sha256(company|title), TTL 180д)
+       collectors (DOU / Djinni)              →  дедуп (sha256(company|title), TTL 180д)
        →  L0-фільтр (регулярки, дешево)        →  LLM-скоринг (лише те, що пройшло L0)
        →  запис у SQLite + журнал прогону      →  Telegram-нотифай
 ```

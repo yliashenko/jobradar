@@ -13,7 +13,7 @@
 
 In-scope epics: **6, 7, 8, 9, 10 (OPS-1 only)** as first-class Playwright targets;
 **1–4** as complex-e2e substrate. Out (stay pytest): **5 Notifications & Telegram
-distribution, 11 Access control, email ingestion (ING-3), the ≤6 no-description cap
+distribution, 11 Access control, the ≤6 no-description cap
 (SCO-4), and threshold→notification gating (SCO-5)** — none has a browser surface.
 
 ---
@@ -56,7 +56,7 @@ end-to-end through the UI. Every one seeds a fixture source and triggers a run.
 | PW-PIPE-10 | **Title-exclude, not body.** Fixture: one item with an anti-goal in the *title*, one with the same term only in the *body* → `run` → the title one is dropped, the body one survives | E2E | L0-3.1, L0-3.2 | fixture + profile.exclude |
 
 **8 flagship E2E** for the whole pipeline (vs the ~26 granular checks pytest
-already owns). Email ingestion (ING-3) and the ≤6 no-description cap (SCO-4) are
+already owns). The ≤6 no-description cap (SCO-4) is
 deliberately **not** here — no browser surface, logic owned by
 [test_collectors.py](../../tests/test_collectors.py). Step 6 may trim 2–3 of the
 narrower dedup cases if pytest coverage is deemed sufficient.
@@ -351,7 +351,7 @@ base_url:<stub>, api_key:test`.
 
 | Piece | What | Unlocks |
 |---|---|---|
-| **H1 — stub source server** | serves canned DOU/Djinni RSS at the configured feed URLs (run without a profile so feeds come from `config.sources`); IMAP stays off | all `PIPE-*` ingestion/dedup/L0 |
+| **H1 — stub source server** | serves canned DOU/Djinni RSS at the configured feed URLs (run without a profile so feeds come from `config.sources`) | all `PIPE-*` ingestion/dedup/L0 |
 | **H2 — stub LLM server** | Tier-B above (scoring **and** cover letters) | `PIPE-1/9`, `HIRE-4/7/9/10/11` |
 | **H3 — run trigger + wait** | drive `POST /run` (the real button) and poll status/feed until done | `OPS-1/2/3`, every `run`-based E2E |
 | **H4 — seed scenarios** | helpers on `seed.py`: scored+verdict rows, `archived`, aged >180d, `runs`-journal rows, `profile.exclude`, hiring stages, `cover_data` | `FEED-8/20/21`, `ANL-1/2/8`, `HIRE-*` |

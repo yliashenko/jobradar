@@ -29,17 +29,8 @@ def load_config():
         )
     with open(paths.config_path(), encoding="utf-8") as fh:
         cfg = json.load(fh)
-    problems = []
-    # Telegram (bot_token/chat_id/enabled), the notify threshold and the heartbeat
-    # window now live only in the profile (set on the Profile page); the web UI and
-    # `jobradar check` surface a missing bot, so config.json no longer validates it.
-    if cfg.get("sources", {}).get("imap", {}).get("enabled"):
-        im = cfg["sources"]["imap"]
-        for field in ("host", "user", "password"):
-            if not im.get(field):
-                problems.append(f"sources.imap.{field} is empty")
-    if problems:
-        die("Config is incomplete:\n  - " + "\n  - ".join(problems))
+    # Account/output settings (LLM, Telegram, notify threshold, heartbeat) live in
+    # the profile now, so config.json has nothing required left to validate here.
 
     # The profile's role (if any) drives WHAT and HOW to scan: feeds and L0
     # come from the role, not from config.json.

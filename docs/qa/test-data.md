@@ -140,7 +140,6 @@ points the feeds at it and the run reads fixtures, never the network.
 - **Wiring:** run **without a `profile.json`** so `candidate.effective_feeds`
   falls back to `config.sources.dou.feeds` / `.djinni.feeds` (with a profile,
   feeds come from the role). Set those to `http://127.0.0.1:<stub>/dou/<case>.xml`.
-  Keep `sources.imap.enabled:false` (email is out of scope).
 - **RSS fixtures:** `clean-match`, `with-duplicate`, `l0-reject` (below salary /
   off-keyword), `cross-source` (same job in a DOU + a Djinni file),
   `cap-25` (25 items), `digit-title`, `case-whitespace`, `title-exclude`.
@@ -150,11 +149,10 @@ points the feeds at it and the run reads fixtures, never the network.
 The product speaks OpenAI-compatible (`provider=openai` + `base_url`, PR #14), so
 the stub implements `POST /chat/completions` and returns deterministic JSON.
 
-- **Wiring:** `scorer.enabled:true`, `scorer.provider:openai`,
-  `scorer.base_url:http://127.0.0.1:<stub>`, `scorer.api_key:test`. Cover letters
-  resolve their key via `llm_settings` (profile→config→env) → the same config
-  scorer settings route cover generation to the stub too; set
-  `cover_letter.model` in config.
+- **Wiring:** `scorer.enabled:true` in config; the **account is set in the profile**
+  (`llm_provider:openai`, `llm_base_url:http://127.0.0.1:<stub>`, `api_key:test`) —
+  the single source `llm_settings` reads. Scoring and cover letters share it, so
+  both route to the stub; set `cover_letter.model` in config (scorer keeps its own).
 - **Response modes** (keyed off a marker in the request payload / vacancy text):
   - *score*: `{score, band, verdict, covers[], gaps[]}` — deterministic per marker.
   - *cover*: `{letter, evaluation, traceability, fit_score}` — band derived from score.

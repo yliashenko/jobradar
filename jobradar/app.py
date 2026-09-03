@@ -38,8 +38,8 @@ def create_app(config: dict | None = None, runner=None) -> Flask:
     )
     cfg = config if config is not None else load_config()
     app.config["JOBRADAR"] = cfg
-    # The notify/band threshold is resolved per-request now (Profile → config),
-    # so a change on the Profile page takes effect without a restart.
+    # The notify/band threshold is resolved per-request now (from the profile),
+    # so a change on the Settings page takes effect without a restart.
     app.config["TOKEN"] = (cfg.get("webui", {}) or {}).get("token", "")
     app.config["RUNNER"] = runner
 
