@@ -4,7 +4,33 @@
 <form class="profile settings" method="post" action="/settings">
   {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
 
-  <h2>LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic, OpenAI, or a custom OpenAI-compatible endpoint (a gateway or local Ollama) — the base URL field appears only for that last one. This is the ONLY place the key lives (profile.json, never committed) — no config.json or env fallback. Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</h2>
+  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule WHILE this web app is up — it is not a system service, so closing the server stops it (for always-on, use cron/launchd instead). Pick a repeat and the time it fires: the hourly repeats run at that hour and every 6/12h after it (08:00 → 08,14,20,02); weekly and two-weekly add a weekday, monthly a day-of-month (1–28). Shares the run lock with the button, so scans never overlap.') }}</h2>
+  <label class="ptoggle"><input type="checkbox" name="schedule_enabled"{% if schedule_enabled %} checked{% endif %}> Auto-scan while the app is open</label>
+  <div class="llmgrid schedgrid">
+    <label class="pfield"><span class="plabel">Repeat</span>
+      <select name="schedule_repeat">
+        {% for key, label in schedule_repeats %}<option value="{{ key }}"{% if key == schedule_repeat %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield weekday-field"><span class="plabel">On</span>
+      <select name="schedule_weekday">
+        {% for idx, label in weekdays %}<option value="{{ idx }}"{% if idx == schedule_weekday|int %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield monthday-field"><span class="plabel">Day of month</span>
+      <select name="schedule_monthday">
+        {% for d in range(1, 29) %}<option value="{{ d }}"{% if d == schedule_monthday|int %} selected{% endif %}>{{ d }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield"><span class="plabel">Time</span>
+      <select name="schedule_hour">
+        {% for h in range(0, 24) %}<option value="{{ h }}"{% if h == schedule_hour|int %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <details class="sect" data-testid="settings-llm"{% if not llm_configured %} open{% endif %}>
+  <summary class="secthead"><span class="secttitle">LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic, OpenAI, or a custom OpenAI-compatible endpoint (a gateway or local Ollama) — the base URL field appears only for that last one. This is the ONLY place the key lives (profile.json, never committed) — no config.json or env fallback. Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</span><span class="sectstatus">{% if api_key %}<b class="co">key set</b> · {{ provider_ui }}{% else %}<span class="muted">not configured</span>{% endif %}</span><span class="chev">▾</span></summary>
   <div class="llmgrid">
     <label class="pfield"><span class="plabel">API key</span><input type="password" name="api_key" value="{{ api_key }}" placeholder="sk-ant-… / sk-…" autocomplete="off"></label>
     <label class="pfield"><span class="plabel">Provider</span>
@@ -23,8 +49,10 @@
       </select>
     </label>
   </div>
+  </details>
 
-  <h2>Telegram {{ ui.tooltip('Where matches (score ≥ Notify threshold) and the silence heartbeat are sent. BOT TOKEN: in Telegram message @BotFather → /newbot → copy the token (looks like 123456789:AA…). CHAT ID: message your new bot anything, then open https://api.telegram.org/bot<token>/getUpdates and copy the number in "chat":{"id":…}. Silence alert: hours of no new vacancy before a "nothing new" ping (a broken parser looks like an empty market). These settings live ONLY here (per-account, in profile.json, never committed) — config.json has no telegram section.') }}</h2>
+  <details class="sect" data-testid="settings-telegram"{% if not telegram_configured %} open{% endif %}>
+  <summary class="secthead"><span class="secttitle">Telegram {{ ui.tooltip('Where matches (score ≥ Notify threshold) and the silence heartbeat are sent. BOT TOKEN: in Telegram message @BotFather → /newbot → copy the token (looks like 123456789:AA…). CHAT ID: message your new bot anything, then open https://api.telegram.org/bot<token>/getUpdates and copy the number in "chat":{"id":…}. Silence alert: hours of no new vacancy before a "nothing new" ping (a broken parser looks like an empty market). These settings live ONLY here (per-account, in profile.json, never committed) — config.json has no telegram section.') }}</span><span class="sectstatus">{% if telegram_bot_token %}{% if telegram_enabled %}<b class="co">on</b>{% else %}<span class="muted">off</span>{% endif %} · bot token set{% else %}<span class="muted">not configured</span>{% endif %}</span><span class="chev">▾</span></summary>
   <label class="ptoggle"><input type="checkbox" name="telegram_enabled"{% if telegram_enabled %} checked{% endif %}> Send matches to Telegram {{ ui.tooltip('Off → scans still score and store (the web feed shows scores), but nothing is pushed to Telegram, heartbeat included.') }}</label>
   <div class="llmgrid">
     <label class="pfield"><span class="plabel">Bot token</span><input type="password" name="telegram_bot_token" value="{{ telegram_bot_token }}" placeholder="123456789:AA… — from @BotFather → /newbot" autocomplete="off"></label>
@@ -41,26 +69,7 @@
       </select>
     </label>
   </div>
-
-  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule WHILE this web app is up — it is not a system service, so closing the server stops it (for always-on, use cron/launchd instead). Interval in hours, only within the active-hours window so there are no night pings. Shares the run lock with the button, so scans never overlap.') }}</h2>
-  <label class="ptoggle"><input type="checkbox" name="schedule_enabled"{% if schedule_enabled %} checked{% endif %}> Auto-scan while the app is open</label>
-  <div class="llmgrid">
-    <label class="pfield"><span class="plabel">Every (hours)</span>
-      <select name="schedule_interval_hours">
-        {% for h in range(1, 25) %}<option value="{{ h }}"{% if schedule_interval_hours|int == h %} selected{% endif %}>{{ h }}</option>{% endfor %}
-      </select>
-    </label>
-    <label class="pfield"><span class="plabel">Active from</span>
-      <select name="schedule_start_hour">
-        {% for h in range(0, 24) %}<option value="{{ h }}"{% if schedule_start_hour|int == h %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
-      </select>
-    </label>
-    <label class="pfield"><span class="plabel">Active until</span>
-      <select name="schedule_end_hour">
-        {% for h in range(1, 25) %}<option value="{{ h }}"{% if schedule_end_hour|int == h %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
-      </select>
-    </label>
-  </div>
+  </details>
 
   <div class="prow save">
     <button name="action" value="save">Save</button>

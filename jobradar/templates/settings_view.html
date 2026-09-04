@@ -5,6 +5,9 @@
   {% if saved %}<p class="saved">Settings saved.</p>{% endif %}
   <div class="prow"><h2 style="margin:0">Settings</h2><a class="editlink" href="{{ settings_link(true, token) }}">Edit</a></div>
 
+  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule while the web app is up (not a system service — closing it stops the schedule). Shares the run lock with the button, so scans never overlap. Set it in Edit.') }}</h2>
+  <p class="pmeta">{% if schedule_enabled %}<b class="co">on</b> — {{ schedule_summary }}, while the app is up{% else %}<span class="muted">off</span> — scans run only from the button or a scheduled <code>jobradar run</code>{% endif %}</p>
+
   <h2>LLM access {{ ui.tooltip('Your own API key powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM). Provider picks Anthropic or an OpenAI-compatible endpoint. The model below is the cover-letter model; scoring keeps its own in config. Set them in Edit.') }}</h2>
   {% if not api_key_set %}<p class="pcallout">No API key set — <b>vacancy scoring</b> and <b>cover-letter generation</b> are unavailable. <a href="{{ settings_link(true, token) }}">Add a key</a> to enable them. The rest of the radar (collection, L0 filtering, triage) works without it.</p>{% endif %}
   <p class="pmeta">{% if api_key_set %}<b class="co">key set</b>{% else %}<span class="muted">no key</span>{% endif %} · provider: {{ llm_provider }}{% if llm_base_url %} · {{ llm_base_url }}{% endif %} · cover-letter model: {% if llm_model %}{{ llm_model }}{% else %}<span class="muted">default (claude-sonnet-5)</span>{% endif %}</p>
@@ -13,8 +16,5 @@
   {% if telegram_enabled and not telegram_bot_token_set %}<p class="pcallout">No bot token set — <b>matches are not delivered to Telegram</b> (they still appear in the web feed). <a href="{{ settings_link(true, token) }}">Add a token</a> to enable notifications.</p>{% endif %}
   {% if not telegram_enabled %}<p class="pcallout">Bot is <b>off</b> — scans still score vacancies, but nothing is pushed to Telegram. Turn it on in <a href="{{ settings_link(true, token) }}">Edit</a>.</p>{% endif %}
   <p class="pmeta">{% if telegram_enabled %}<b class="co">on</b>{% else %}<span class="muted">off</span>{% endif %} · {% if telegram_bot_token_set %}bot token set{% else %}<span class="muted">no bot token</span>{% endif %} · chat ID: {% if telegram_chat_id %}{{ telegram_chat_id }}{% else %}<span class="muted">not set</span>{% endif %} · notify ≥ {% if notify_min_score %}{{ notify_min_score }}{% else %}7 <span class="muted">(default)</span>{% endif %} · silence alert: {{ heartbeat_alert_hours }}h</p>
-
-  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule while the web app is up (not a system service — closing it stops the schedule). Shares the run lock with the button, so scans never overlap. Set it in Edit.') }}</h2>
-  <p class="pmeta">{% if schedule_enabled %}<b class="co">on</b> — every {{ schedule_interval_hours }}h, {{ '%02d'|format(schedule_start_hour) }}:00–{{ '%02d'|format(schedule_end_hour) }}:00, while the app is up{% else %}<span class="muted">off</span> — scans run only from the button or a scheduled <code>jobradar run</code>{% endif %}</p>
 </div>
 {% endblock %}

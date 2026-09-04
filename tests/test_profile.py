@@ -1714,16 +1714,18 @@ def test_bot_and_schedule_fields_round_trip(tmp_path):
             "notify_min_score": "8",
             "heartbeat_alert_hours": 48,
             "schedule_enabled": True,
-            "schedule_interval_hours": 6,
-            "schedule_start_hour": 9,
-            "schedule_end_hour": 21,
+            "schedule_repeat": "weekly",
+            "schedule_hour": 9,
+            "schedule_weekday": 2,
+            "schedule_monthday": 15,
         }
     )
     d = profile.load()
     assert d["telegram_enabled"] is False and d["notify_min_score"] == "8"
     assert d["heartbeat_alert_hours"] == 48
-    assert d["schedule_enabled"] is True and d["schedule_interval_hours"] == 6
-    assert d["schedule_start_hour"] == 9 and d["schedule_end_hour"] == 21
+    assert d["schedule_enabled"] is True and d["schedule_repeat"] == "weekly"
+    assert d["schedule_hour"] == 9 and d["schedule_weekday"] == 2
+    assert d["schedule_monthday"] == 15
 
 
 def test_bot_and_schedule_defaults(tmp_path):
@@ -1731,7 +1733,25 @@ def test_bot_and_schedule_defaults(tmp_path):
     d = profile.default_profile()
     assert d["telegram_enabled"] is True and d["notify_min_score"] == ""
     assert d["heartbeat_alert_hours"] == 24
-    assert d["schedule_enabled"] is False and d["schedule_interval_hours"] == 3
+    assert d["schedule_enabled"] is False and d["schedule_repeat"] == "daily"
+    assert d["schedule_hour"] == 9
+
+
+def test_unknown_schedule_repeat_and_out_of_range_are_clamped(tmp_path):
+    # A hand-edited/stale profile must not feed the scheduler a slot it never matches.
+    paths.use_home(str(tmp_path))
+    d = profile.save(
+        {
+            "role": "qa_automation",
+            "schedule_repeat": "every_hour",  # not a known cadence
+            "schedule_hour": 99,
+            "schedule_weekday": 9,
+            "schedule_monthday": 40,
+        }
+    )
+    assert d["schedule_repeat"] == "daily"  # fell back to the default
+    assert d["schedule_hour"] == 23 and d["schedule_weekday"] == 6
+    assert d["schedule_monthday"] == 28
 
 
 def test_edit_page_has_bot_and_schedule_controls(tmp_path):
@@ -1740,7 +1760,7 @@ def test_edit_page_has_bot_and_schedule_controls(tmp_path):
     assert 'name="telegram_enabled"' in html and 'name="notify_min_score"' in html
     assert 'name="heartbeat_alert_hours"' in html
     assert 'name="schedule_enabled"' in html
-    assert 'name="schedule_interval_hours"' in html
+    assert 'name="schedule_repeat"' in html
     assert "Auto-scan" in html
 
 
@@ -1751,12 +1771,13 @@ def test_settings_hour_fields_are_selects(tmp_path):
     for name in (
         "notify_min_score",
         "heartbeat_alert_hours",
-        "schedule_interval_hours",
-        "schedule_start_hour",
-        "schedule_end_hour",
+        "schedule_repeat",
+        "schedule_hour",
+        "schedule_weekday",
+        "schedule_monthday",
     ):
         assert f'<select name="{name}"' in html, name
-    # The active-window selectors read as clock times, not bare integers.
+    # The Time selector reads as a clock time, not a bare integer.
     assert "08:00" in html and "23:00" in html
 
 
@@ -1764,9 +1785,61 @@ def test_view_page_shows_schedule_status(tmp_path):
     paths.use_home(str(tmp_path))
     data = profile.default_profile()
     data["schedule_enabled"] = True
-    data["schedule_interval_hours"] = 4
-    data["schedule_start_hour"] = 8
-    data["schedule_end_hour"] = 22
+    data["schedule_repeat"] = "weekly"
+    data["schedule_weekday"] = 0
+    data["schedule_hour"] = 8
     html = render_settings_view(data)
-    assert "Auto-scan" in html and "every 4h" in html
-    assert "08:00" in html and "22:00" in html  # zero-padded active window
+    assert "Auto-scan" in html and "Every week on Monday" in html
+    assert "08:00" in html  # zero-padded anchor time
+
+
+def test_view_schedule_summary_hourly_lists_the_fixed_times(tmp_path):
+    # The hourly repeats spell out every fire time off the anchor hour, sorted.
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["schedule_enabled"] = True
+    data["schedule_repeat"] = "every_6h"
+    data["schedule_hour"] = 8
+    html = render_settings_view(data)
+    assert "Every 6 hours — 02:00, 08:00, 14:00, 20:00" in html
+
+
+def test_view_schedule_summary_monthly_shows_the_day_of_month(tmp_path):
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["schedule_enabled"] = True
+    data["schedule_repeat"] = "monthly"
+    data["schedule_monthday"] = 15
+    data["schedule_hour"] = 9
+    html = render_settings_view(data)
+    assert "Every month on day 15, at 09:00" in html
+
+
+def test_llm_and_telegram_sections_are_collapsible(tmp_path):
+    paths.use_home(str(tmp_path))
+    html = render_settings_edit(profile.default_profile())
+    # Two collapsible <details> sections, each with a summary heading and a chevron.
+    assert html.count('<details class="sect"') == 2
+    assert 'class="secthead"' in html and 'class="chev"' in html
+
+
+def test_unconfigured_sections_start_open(tmp_path):
+    # A fresh profile has no key and no bot token → both open, ready to fill.
+    paths.use_home(str(tmp_path))
+    html = render_settings_edit(profile.default_profile())
+    assert 'data-testid="settings-llm" open>' in html
+    assert 'data-testid="settings-telegram" open>' in html
+    assert "not configured" in html
+
+
+def test_configured_sections_start_collapsed(tmp_path):
+    # Filled and working → the section collapses to a status summary, expandable.
+    paths.use_home(str(tmp_path))
+    data = profile.default_profile()
+    data["api_key"] = "sk-ant-xxx"
+    data["telegram_bot_token"] = "123:AA"
+    html = render_settings_edit(data)
+    # Neither section carries the `open` attribute → both start collapsed.
+    assert 'data-testid="settings-llm" open>' not in html
+    assert 'data-testid="settings-telegram" open>' not in html
+    assert "key set" in html and "bot token set" in html
