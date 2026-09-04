@@ -691,6 +691,60 @@ form.filters {
   font-weight: 400;
 }
 
+/* Collapsible Settings section (LLM access, Telegram). It starts open while it still
+   needs filling and collapsed once configured — the summary then reads as a status
+   line ("key set · anthropic"). Fields inside a closed <details> still submit, so a
+   collapsed, untouched section saves its values unchanged. Same disclosure pattern as
+   the card/company groups: hidden native marker, a ▾ chevron that flips when open. */
+.profile .sect {
+  border-top: 1px solid var(--line);
+}
+
+.profile .sect:first-of-type {
+  border-top: 0;
+}
+
+.profile .sect > summary.secthead {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 0 0.5rem;
+}
+
+.profile .sect > summary.secthead::-webkit-details-marker {
+  display: none;
+}
+
+.profile .secttitle {
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.profile .sectstatus {
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+
+/* Open → the fields below already show the values, so drop the summary echo. */
+.profile .sect[open] .sectstatus {
+  display: none;
+}
+
+.profile .secthead .chev {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+}
+
+.profile .sect[open] .secthead .chev {
+  transform: rotate(180deg);
+}
+
 .profile .hint {
   color: var(--dim);
   font-size: 0.76rem;
@@ -742,6 +796,21 @@ form.filters {
 .profile .llmgrid:has(select[name="llm_provider"] option[value="anthropic"]:checked) .baseurl-field,
 .profile .llmgrid:has(select[name="llm_provider"] option[value="openai"]:checked) .baseurl-field {
   display: none;
+}
+
+/* Auto-scan day fields only apply to some repeats: a weekday for weekly/two-weekly,
+   a day-of-month for monthly. Hidden by default; the live <select> reveals the one
+   that matches via :has() — no JS. (Reversed from the base-URL rule above: these are
+   meaningless for the other repeats, so hidden is the safe default.) */
+.profile .schedgrid .weekday-field,
+.profile .schedgrid .monthday-field {
+  display: none;
+}
+
+.profile .schedgrid:has(select[name="schedule_repeat"] option[value="weekly"]:checked) .weekday-field,
+.profile .schedgrid:has(select[name="schedule_repeat"] option[value="biweekly"]:checked) .weekday-field,
+.profile .schedgrid:has(select[name="schedule_repeat"] option[value="monthly"]:checked) .monthday-field {
+  display: block;
 }
 
 .profile .pfield {
