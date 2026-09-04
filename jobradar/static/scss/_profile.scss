@@ -21,9 +21,6 @@
 .profile .sect {
   border-top: 1px solid var(--line);
 }
-.profile .sect:first-of-type {
-  border-top: 0;
-}
 .profile .sect > summary.secthead {
   list-style: none;
   cursor: pointer;

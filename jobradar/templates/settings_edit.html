@@ -4,6 +4,31 @@
 <form class="profile settings" method="post" action="/settings">
   {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
 
+  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule WHILE this web app is up — it is not a system service, so closing the server stops it (for always-on, use cron/launchd instead). Pick a repeat and the time it fires: the hourly repeats run at that hour and every 6/12h after it (08:00 → 08,14,20,02); weekly and two-weekly add a weekday, monthly a day-of-month (1–28). Shares the run lock with the button, so scans never overlap.') }}</h2>
+  <label class="ptoggle"><input type="checkbox" name="schedule_enabled"{% if schedule_enabled %} checked{% endif %}> Auto-scan while the app is open</label>
+  <div class="llmgrid schedgrid">
+    <label class="pfield"><span class="plabel">Repeat</span>
+      <select name="schedule_repeat">
+        {% for key, label in schedule_repeats %}<option value="{{ key }}"{% if key == schedule_repeat %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield weekday-field"><span class="plabel">On</span>
+      <select name="schedule_weekday">
+        {% for idx, label in weekdays %}<option value="{{ idx }}"{% if idx == schedule_weekday|int %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield monthday-field"><span class="plabel">Day of month</span>
+      <select name="schedule_monthday">
+        {% for d in range(1, 29) %}<option value="{{ d }}"{% if d == schedule_monthday|int %} selected{% endif %}>{{ d }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="pfield"><span class="plabel">Time</span>
+      <select name="schedule_hour">
+        {% for h in range(0, 24) %}<option value="{{ h }}"{% if h == schedule_hour|int %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+
   <details class="sect" data-testid="settings-llm"{% if not llm_configured %} open{% endif %}>
   <summary class="secthead"><span class="secttitle">LLM access {{ ui.tooltip('Your own LLM so the tool runs on your account. The KEY powers every LLM feature — vacancy scoring and cover-letter generation (L0 filtering and skill detection are rule-based, no LLM, no key). Provider picks Anthropic, OpenAI, or a custom OpenAI-compatible endpoint (a gateway or local Ollama) — the base URL field appears only for that last one. This is the ONLY place the key lives (profile.json, never committed) — no config.json or env fallback. Model below is the cover-letter model; scoring keeps its own cheaper model in config.') }}</span><span class="sectstatus">{% if api_key %}<b class="co">key set</b> · {{ provider_ui }}{% else %}<span class="muted">not configured</span>{% endif %}</span><span class="chev">▾</span></summary>
   <div class="llmgrid">
@@ -45,31 +70,6 @@
     </label>
   </div>
   </details>
-
-  <h2>Auto-scan {{ ui.tooltip('Runs a scan on a schedule WHILE this web app is up — it is not a system service, so closing the server stops it (for always-on, use cron/launchd instead). Pick a repeat and the time it fires: the hourly repeats run at that hour and every 6/12h after it (08:00 → 08,14,20,02); weekly and two-weekly add a weekday, monthly a day-of-month (1–28). Shares the run lock with the button, so scans never overlap.') }}</h2>
-  <label class="ptoggle"><input type="checkbox" name="schedule_enabled"{% if schedule_enabled %} checked{% endif %}> Auto-scan while the app is open</label>
-  <div class="llmgrid schedgrid">
-    <label class="pfield"><span class="plabel">Repeat</span>
-      <select name="schedule_repeat">
-        {% for key, label in schedule_repeats %}<option value="{{ key }}"{% if key == schedule_repeat %} selected{% endif %}>{{ label }}</option>{% endfor %}
-      </select>
-    </label>
-    <label class="pfield weekday-field"><span class="plabel">On</span>
-      <select name="schedule_weekday">
-        {% for idx, label in weekdays %}<option value="{{ idx }}"{% if idx == schedule_weekday|int %} selected{% endif %}>{{ label }}</option>{% endfor %}
-      </select>
-    </label>
-    <label class="pfield monthday-field"><span class="plabel">Day of month</span>
-      <select name="schedule_monthday">
-        {% for d in range(1, 29) %}<option value="{{ d }}"{% if d == schedule_monthday|int %} selected{% endif %}>{{ d }}</option>{% endfor %}
-      </select>
-    </label>
-    <label class="pfield"><span class="plabel">Time</span>
-      <select name="schedule_hour">
-        {% for h in range(0, 24) %}<option value="{{ h }}"{% if h == schedule_hour|int %} selected{% endif %}>{{ '%02d'|format(h) }}:00</option>{% endfor %}
-      </select>
-    </label>
-  </div>
 
   <div class="prow save">
     <button name="action" value="save">Save</button>
