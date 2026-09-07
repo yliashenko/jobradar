@@ -44,9 +44,10 @@ def _telegram_and_schedule() -> dict:
         "notify_min_score": request.form.get("notify_min_score", "").strip(),
         "heartbeat_alert_hours": _int(request.form.get("heartbeat_alert_hours"), 24),
         "schedule_enabled": request.form.get("schedule_enabled") == "on",
-        "schedule_interval_hours": _int(request.form.get("schedule_interval_hours"), 3),
-        "schedule_start_hour": _int(request.form.get("schedule_start_hour"), 8),
-        "schedule_end_hour": _int(request.form.get("schedule_end_hour"), 23),
+        "schedule_repeat": request.form.get("schedule_repeat", "").strip(),
+        "schedule_hour": _int(request.form.get("schedule_hour"), 9),
+        "schedule_weekday": _int(request.form.get("schedule_weekday"), 0),
+        "schedule_monthday": _int(request.form.get("schedule_monthday"), 1),
     }
 
 

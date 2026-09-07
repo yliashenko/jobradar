@@ -16,7 +16,12 @@ from jobradar import clock, paths, roles, runner, skills, stats
 from jobradar.core import cover
 from jobradar.core.db import KEEP_DUPS_FOR_RUNS
 from jobradar.core.dedup import normalize_key
-from jobradar.web.constants import STATUS_LABELS
+from jobradar.web.constants import (
+    SCHEDULE_REPEAT_LABELS,
+    SCHEDULE_WEEKDAY_LABELS,
+    SCHEDULE_WEEKDAYS,
+    STATUS_LABELS,
+)
 from jobradar.web.format import fmt_epoch, fmt_iso, row_text
 from jobradar.web.urls import build_query, co_sets, feed_link, tech_href, tech_sets
 
@@ -1042,6 +1047,27 @@ def cv_tagged(cv_text, active=None, custom=None):
     return {"order": order, "block": Markup(block)}
 
 
+def _schedule_summary(data) -> str:
+    """One-line auto-scan cadence for the Settings view — e.g. 'Every week on Monday,
+    at 08:00'. The hourly repeats spell out the fixed times off the anchor hour."""
+    repeat = data.get("schedule_repeat", "daily")
+    hour = int(data.get("schedule_hour", 9) or 0)
+    label = SCHEDULE_REPEAT_LABELS.get(repeat, repeat)
+    if repeat in ("every_6h", "every_12h"):
+        step = 6 if repeat == "every_6h" else 12
+        times = sorted((hour + step * i) % 24 for i in range(24 // step))
+        return "{} — {}".format(label, ", ".join(f"{h:02d}:00" for h in times))
+    if repeat in ("weekly", "biweekly"):
+        day = SCHEDULE_WEEKDAY_LABELS.get(
+            int(data.get("schedule_weekday", 0) or 0), "Monday"
+        )
+        return f"{label} on {day}, at {hour:02d}:00"
+    if repeat == "monthly":
+        dom = int(data.get("schedule_monthday", 1) or 1)
+        return f"{label} on day {dom}, at {hour:02d}:00"
+    return f"{label}, at {hour:02d}:00"
+
+
 def profile_view_context(params, data, saved) -> dict:
     notes = data.get("notes", "")
     return {
@@ -1066,9 +1092,7 @@ def profile_view_context(params, data, saved) -> dict:
         "notify_min_score": str(data.get("notify_min_score", "")).strip(),
         "heartbeat_alert_hours": data.get("heartbeat_alert_hours", 24),
         "schedule_enabled": data.get("schedule_enabled", False),
-        "schedule_interval_hours": data.get("schedule_interval_hours", 3),
-        "schedule_start_hour": data.get("schedule_start_hour", 8),
-        "schedule_end_hour": data.get("schedule_end_hour", 23),
+        "schedule_summary": _schedule_summary(data),
     }
 
 
@@ -1113,14 +1137,24 @@ def profile_edit_context(params, data, preview=None) -> dict:
         "llm_base_url": data.get("llm_base_url", ""),
         "cover_models": cover.COVER_MODEL_CHOICES,
         "cover_model_known": (data.get("llm_model", "") or "") in cover.COVER_MODEL_IDS,
+        # A section starts collapsed once it is set up (its summary tells the user it
+        # works) and open while it still needs filling — see the <details> in the
+        # template. LLM is "set up" when a key exists; Telegram when a bot token does.
+        "llm_configured": bool(data.get("api_key")),
+        "telegram_configured": bool(data.get("telegram_bot_token")),
         "telegram_bot_token": data.get("telegram_bot_token", ""),
         "telegram_chat_id": data.get("telegram_chat_id", ""),
         "telegram_enabled": data.get("telegram_enabled", True),
         "notify_min_score": data.get("notify_min_score", ""),
         "heartbeat_alert_hours": data.get("heartbeat_alert_hours", 24),
         "schedule_enabled": data.get("schedule_enabled", False),
-        "schedule_interval_hours": data.get("schedule_interval_hours", 3),
-        "schedule_start_hour": data.get("schedule_start_hour", 8),
-        "schedule_end_hour": data.get("schedule_end_hour", 23),
+        "schedule_repeat": data.get("schedule_repeat", "daily"),
+        "schedule_hour": data.get("schedule_hour", 9),
+        "schedule_weekday": data.get("schedule_weekday", 0),
+        "schedule_monthday": data.get("schedule_monthday", 1),
+        "schedule_repeats": [
+            (k, SCHEDULE_REPEAT_LABELS[k]) for k in profile_data.SCHEDULE_REPEATS
+        ],
+        "weekdays": SCHEDULE_WEEKDAYS,
         "has_profile": os.path.exists(paths.profile_json_path()),
     }

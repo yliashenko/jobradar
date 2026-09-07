@@ -71,13 +71,37 @@ def default_profile():
         "notify_min_score": "",
         "heartbeat_alert_hours": 24,
         # In-process auto-scan: fires only while `serve` is up (it is not a system
-        # service). Interval in hours, gated to an active-hours window so there are
-        # no night pings; shares the run lock, so it never overlaps the button.
+        # service). Reminder-style cadence — `schedule_repeat` is the rhythm (one of
+        # SCHEDULE_REPEATS), `schedule_hour` the anchor hour (every-6h at 8 fires
+        # 08,14,20,02). `schedule_weekday` (0=Mon) applies to weekly/biweekly,
+        # `schedule_monthday` (1–28) to monthly. Shares the run lock with the button.
         "schedule_enabled": False,
-        "schedule_interval_hours": 3,
-        "schedule_start_hour": 8,
-        "schedule_end_hour": 23,
+        "schedule_repeat": "daily",
+        "schedule_hour": 9,
+        "schedule_weekday": 0,
+        "schedule_monthday": 1,
     }
+
+
+# Auto-scan cadences, canonical order (drives the Settings dropdown via the web
+# layer's SCHEDULE_REPEAT_LABELS). Keys are the stored values; save() clamps to
+# this set so an unknown repeat can't slip in and silently never fire.
+SCHEDULE_REPEATS = (
+    "every_6h",
+    "every_12h",
+    "daily",
+    "weekday",
+    "weekly",
+    "biweekly",
+    "monthly",
+)
+
+
+def _clamp_int(value, low, high, default):
+    try:
+        return max(low, min(high, int(value)))
+    except (TypeError, ValueError):
+        return default
 
 
 def load():
@@ -137,6 +161,14 @@ def save(data):
             seen.add(term.lower())
             stack.append(term)
     clean["stack"] = stack
+    # Auto-scan schedule: keep the cadence a known key and the hour/day fields in
+    # range, so a hand-edited or stale profile can't feed the scheduler a slot it
+    # would never match (which reads exactly like a silently-broken schedule).
+    if clean["schedule_repeat"] not in SCHEDULE_REPEATS:
+        clean["schedule_repeat"] = "daily"
+    clean["schedule_hour"] = _clamp_int(clean["schedule_hour"], 0, 23, 9)
+    clean["schedule_weekday"] = _clamp_int(clean["schedule_weekday"], 0, 6, 0)
+    clean["schedule_monthday"] = _clamp_int(clean["schedule_monthday"], 1, 28, 1)
     tmp = paths.profile_json_path() + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         json.dump(clean, fh, ensure_ascii=False, indent=2)

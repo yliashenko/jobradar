@@ -25,6 +25,31 @@ HIRING_LABELS = {
 }
 HIRING_ORDER = ("waiting_hr", "pre_screen", "tech_interview", "finish")
 
+# Auto-scan cadence labels (Settings → Auto-scan). Keyed by candidate.SCHEDULE_REPEATS
+# (which owns the canonical order); the view builds the dropdown from that order.
+SCHEDULE_REPEAT_LABELS = {
+    "every_6h": "Every 6 hours",
+    "every_12h": "Every 12 hours",
+    "daily": "Every day",
+    "weekday": "Every weekday",
+    "weekly": "Every week",
+    "biweekly": "Every two weeks",
+    "monthly": "Every month",
+}
+# Auto-scan weekday picker (weekly/two-weekly). 0=Monday … 6=Sunday, matching
+# datetime.weekday(); order drives the dropdown. Named apart from the calendar's own
+# short WEEKDAYS in views.py — different purpose, different labels.
+SCHEDULE_WEEKDAYS = (
+    (0, "Monday"),
+    (1, "Tuesday"),
+    (2, "Wednesday"),
+    (3, "Thursday"),
+    (4, "Friday"),
+    (5, "Saturday"),
+    (6, "Sunday"),
+)
+SCHEDULE_WEEKDAY_LABELS = dict(SCHEDULE_WEEKDAYS)
+
 # Scorer bands: machine key → card label.
 BAND_LABELS = {
     "strong": "strong match",

@@ -16,4 +16,10 @@ export class JobradarApi {
   setStatus(hash: string, status: string): Promise<APIResponse> {
     return this.request.post('/status', { form: { hash, status }, maxRedirects: 0 });
   }
+
+  /** Arrange settings pre-state (LLM/Telegram/auto-scan) the way the Settings form
+   *  would, so a test can start from a configured account without clicking through it. */
+  saveSettings(form: Record<string, string>): Promise<APIResponse> {
+    return this.request.post('/settings', { form: { action: 'save', ...form }, maxRedirects: 0 });
+  }
 }
