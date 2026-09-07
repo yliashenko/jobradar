@@ -337,9 +337,29 @@ form.filters {
 .tabrow .counts b {
   color: var(--petrol);
 }
-/* The list is cut at FEED_LIMIT — quiet, but never invisible. */
-.tabrow .counts .cap {
+/* Feed pager — under the list, same weight as the tabs above it. */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  margin: 1.4rem 0 0.4rem;
+  font-size: 0.85rem;
+}
+.pager .pgstep {
+  color: var(--petrol);
+  text-decoration: none;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.pager .pgstep:hover {
+  border-color: var(--petrol);
+}
+.pager .pgstep.off {
   color: var(--dim);
-  font-size: 0.8rem;
-  font-weight: 400;
+  opacity: 0.45;
+}
+.pager .pgwhere {
+  color: var(--dim);
 }

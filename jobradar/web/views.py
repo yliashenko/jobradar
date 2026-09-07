@@ -87,10 +87,12 @@ WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 # only way the radar can silently drop rows, so /runs flags it.
 DOU_FEED_CAP = 25
 
-# How many cards one feed page renders. The list is deliberately unpaginated —
-# the tool ranks, it doesn't archive — but the cut has to be VISIBLE: silently
-# showing 300 of 600 looks like the missing ones were never collected.
-FEED_LIMIT = 300
+# Cards per feed page. The feed used to render its whole result at once, which
+# meant highlighting and tagging hundreds of descriptions that are collapsed
+# (.desc is display:none until a card is unfolded) — ~2 s and 3.4 MB for a page
+# you read the top of. Paging is the honest fix: the ranking is unchanged, every
+# row stays reachable, and the work scales with what is on screen.
+FEED_PAGE = 50
 
 PIE_COLORS = (
     "var(--petrol)",
@@ -690,7 +692,30 @@ def _group(rows):
     return items
 
 
-def _tabs(params, counts, total, shown, capped=False):
+def _page_number(params, matching):
+    """1-based page, clamped into range. Clamping matters because every other
+    link resets `page` (feed_link drops it) — a stale one only ever arrives by
+    hand, and landing on an empty page would read as "the filter found nothing"."""
+    pages = max(1, -(-matching // FEED_PAGE))
+    try:
+        page = int(params.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    return min(max(page, 1), pages)
+
+
+def _pager(params, page, matching):
+    pages = max(1, -(-matching // FEED_PAGE))
+    return {
+        "page": page,
+        "pages": pages,
+        "matching": matching,
+        "prev": feed_link(params, page=page - 1) if page > 1 else "",
+        "next": feed_link(params, page=page + 1) if page < pages else "",
+    }
+
+
+def _tabs(params, counts, total, shown, matching=None):
     status = params.get("status", "new")
     tabs = []
     for key in ("new", "interested", "applied", "skipped", "all"):
@@ -707,8 +732,9 @@ def _tabs(params, counts, total, shown, capped=False):
         "tabs": tabs,
         "total": total,
         "shown": shown,
-        "capped": capped,
-        "cap": FEED_LIMIT,
+        # How many the current filters match — differs from `shown` as soon as
+        # the result spans more than one page.
+        "matching": matching,
     }
 
 
@@ -834,15 +860,8 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     sql = "SELECT * FROM jobs"
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += (
-        " ORDER BY " + _order_by(_effective_sort(params)) + f" LIMIT {FEED_LIMIT + 1}"
-    )
+    sql += " ORDER BY " + _order_by(_effective_sort(params))
     rows = conn.execute(sql, args).fetchall()
-    # One row over the limit only to learn that the cut happened. Unscored rows
-    # sort last, so a truncated feed hides exactly them — findable by search but
-    # invisible in the list, which reads as "the vacancy is gone".
-    capped = len(rows) > FEED_LIMIT
-    rows = rows[:FEED_LIMIT]
 
     included, excluded = tech_sets(params)
     if included or excluded:
@@ -865,6 +884,12 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     if muted:
         rows = [r for r in rows if not title_muted(r["title"])]
 
+    # Tag and "not for me" filters run in Python (word boundaries LIKE can't do),
+    # so the page is cut only here — after everything that decides a match.
+    matching = len(rows)
+    page = _page_number(params, matching)
+    rows = rows[(page - 1) * FEED_PAGE : page * FEED_PAGE]
+
     counts: dict = {}
     for r in conn.execute(
         "SELECT status, title FROM jobs WHERE l0_pass = 1 AND status != 'archived'"
@@ -876,7 +901,8 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     ctx = {
         "has_jobs": bool(rows),
         "empty": _empty_feed(params),
-        "tabs": _tabs(params, counts, sum(counts.values()), len(rows), capped),
+        "tabs": _tabs(params, counts, sum(counts.values()), len(rows), matching),
+        "pager": _pager(params, page, matching),
         "filters": _filters(conn, params),
         "pick_tags": _pick_tags(conn, params),
         "pick_companies": _pick_companies(conn, params),

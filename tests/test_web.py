@@ -621,10 +621,10 @@ class TestFeedSort:
         assert html.index("Middle QA") < html.index("Senior QA Automation Engineer")
 
 
-class TestFeedCap:
-    """Стрічка ріже список на FEED_LIMIT. Незбалені (score IS NULL) сортуються
-    останніми, тож саме вони зникають — у БД є, пошук їх знаходить, а в списку
-    їх немає. Мовчазний обрив і є багом; сам ліміт — свідомий."""
+class TestFeedPaging:
+    """Стрічка сторінкується. Раніше вона рендерила весь результат одразу —
+    незбалені сортуються останніми, тож при обриві саме вони зникали зі списку,
+    хоч пошук їх знаходив."""
 
     def _fill(self, tmp_path, count):
         _seed(str(tmp_path))
@@ -644,20 +644,52 @@ class TestFeedCap:
         conn.close()
         return create_app(config={}, runner=None).test_client()
 
-    def test_uncut_feed_says_nothing_about_a_cap(self, client):
+    def test_short_feed_has_no_pager(self, client):
         html = client.get("/").get_data(as_text=True)
-        assert 'data-testid="feed-capped"' not in html
+        assert 'data-testid="pager"' not in html
 
-    def test_cut_feed_is_flagged(self, tmp_path):
-        client = self._fill(tmp_path, views.FEED_LIMIT + 5)
+    def test_long_feed_renders_one_page_and_a_pager(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE * 2)
         html = client.get("/").get_data(as_text=True)
-        assert 'data-testid="feed-capped"' in html
-        assert f"cut at {views.FEED_LIMIT}" in html
+        assert html.count('data-testid="job-card"') == views.FEED_PAGE
+        assert 'data-testid="pager-next"' in html
+        assert 'data-testid="pager-prev"' not in html
 
-    def test_cut_feed_still_renders_exactly_the_limit(self, tmp_path):
-        client = self._fill(tmp_path, views.FEED_LIMIT + 5)
+    def test_counter_names_the_full_match_not_just_the_page(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE * 2)
         html = client.get("/").get_data(as_text=True)
-        assert f"shown <b>{views.FEED_LIMIT}</b>" in html
+        assert f"shown <b>{views.FEED_PAGE}</b> of <b>" in html
+
+    def test_second_page_holds_the_rest(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE + 3)
+        first = client.get("/").get_data(as_text=True)
+        second = client.get("/?page=2").get_data(as_text=True)
+        assert 'data-testid="pager-prev"' in second
+        assert 'data-testid="pager-next"' not in second
+        # Жодна вакансія не втрачена й не задубльована між сторінками.
+        import re
+
+        def hashes(html):
+            return set(re.findall(r'data-testid="job-card" data-hash="([^"]+)"', html))
+
+        assert not (hashes(first) & hashes(second))
+        assert len(hashes(first) | hashes(second)) == views.FEED_PAGE + 3 + 2
+
+    def test_page_out_of_range_is_clamped_not_empty(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE + 3)
+        html = client.get("/?page=99").get_data(as_text=True)
+        assert 'data-testid="job-card"' in html
+
+    def test_garbage_page_falls_back_to_the_first(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE + 3)
+        html = client.get("/?page=nonsense").get_data(as_text=True)
+        assert html.count('data-testid="job-card"') == views.FEED_PAGE
+
+    def test_filter_links_reset_the_page(self, tmp_path):
+        # Інакше зміна фільтра лишала б тебе на 7-й сторінці нового результату.
+        from jobradar.web.urls import feed_link
+
+        assert "page=" not in feed_link({"page": "7", "status": "new"}, status="all")
 
 
 class TestRunsScoringFailures:

@@ -19,6 +19,7 @@
   {% if item.kind == 'group' %}{{ card.company_group(item.company, item.members, threshold, params, runbox.back, also) }}{% else %}{{ card.job_card(item.row, threshold, params, runbox.back, also_on_links=also.get(item.row['hash'])) }}{% endif %}
   {% endfor %}
 </div>
+{{ ui.pager(pager) }}
 {% else %}
 <div class="empty"><b>{{ empty.title }}</b>{{ empty.body }}</div>
 {% endif %}
