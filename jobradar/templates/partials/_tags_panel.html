@@ -1,0 +1,13 @@
+{% import "partials/_macros.html" as ui %}
+{#- The tag popup's body, rendered on its own so /filters/tags can serve it when
+    the popup is first opened. Counting the tags means running the 320-term
+    skills regex over every matching description — 40% of the feed's render time
+    for a panel that is closed by default. -#}
+<form class="pick-panel" method="get" action="/">
+  {{ ui.hidden_fields(params, ['status', 'source', 'q', 'min', 'l0', 'token', 'notech', 'co', 'sort', 'days']) }}
+  <input class="picksearch" type="text" placeholder="search a tag" aria-label="search a tag" autocomplete="off">
+  <div class="pick-scroll">
+    {% if pick_tags.sections %}{% for sect in pick_tags.sections %}<section class="pick-sect"><h4>{{ sect.name | group_label }}</h4>{% for row in sect.rows %}{{ ui.pickrow('tech', row) }}{% endfor %}</section>{% endfor %}{% else %}<div class="pick-empty">No tags yet — run a scan.</div>{% endif %}
+  </div>
+  <div class="pick-actions"><button class="apply">Apply</button><a class="clear" href="{{ feed_link(params, tech='') }}">Reset</a></div>
+</form>

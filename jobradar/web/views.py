@@ -757,6 +757,26 @@ def _filters(conn, params):
     }
 
 
+def tags_popup_stub(params):
+    """What the feed needs to draw the CLOSED tag popup: the chosen-tag count
+    (straight from the URL) and where to fetch the body from. Deliberately does
+    not touch the database — counting the tags is `pick_tags_context`, and it is
+    the single most expensive thing the feed used to do unasked."""
+    included, _ = tech_sets(params)
+    # `page` is dropped: the counts cover the whole match, not one page, so
+    # carrying it would only give the same panel a different URL per page.
+    query = build_query({k: v for k, v in params.items() if k != "page"})
+    return {
+        "included": len(included),
+        "src": "/filters/tags" + (("?" + query) if query else ""),
+    }
+
+
+def pick_tags_context(conn, params) -> dict:
+    """Context for the tag popup body, served on demand."""
+    return {"pick_tags": _pick_tags(conn, params)}
+
+
 def _pick_tags(conn, params):
     # Count within the current view (status, source, search, company, days…) so
     # a tag's number matches what selecting it actually shows in the feed. The
@@ -904,7 +924,7 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
         "tabs": _tabs(params, counts, sum(counts.values()), len(rows), matching),
         "pager": _pager(params, page, matching),
         "filters": _filters(conn, params),
-        "pick_tags": _pick_tags(conn, params),
+        "pick_tags": tags_popup_stub(params),
         "pick_companies": _pick_companies(conn, params),
         "runbox": _runbox(conn, run_status, query),
         "threshold": threshold,

@@ -716,3 +716,45 @@ class TestRunsScoringFailures:
     def test_clean_run_shows_no_marker(self, tmp_path):
         html = self._run(tmp_path, 0).get("/runs").get_data(as_text=True)
         assert 'data-testid="scoring-failed"' not in html
+
+
+class TestLazyTagPopup:
+    """Лічильники тегів = регекс на 320 термінів по кожному опису у вибірці.
+    Попап закритий за замовчуванням, тож стрічка віддає лише оболонку."""
+
+    def test_feed_ships_the_shell_without_counting(self, client):
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-pick="tags"' in html
+        assert 'data-testid="tags-panel"' in html
+        # Тіла попапа у стрічці немає — ні чекбоксів, ні секцій.
+        assert 'name="tech" value=' not in html
+
+    def test_shell_points_at_the_fragment(self, client):
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-src="/filters/tags' in html
+
+    def test_fragment_serves_the_counted_panel(self, client):
+        resp = client.get("/filters/tags?status=all")
+        assert resp.status_code == 200
+        html = resp.get_data(as_text=True)
+        assert "pick-panel" in html and "picksearch" in html
+        assert 'name="tech" value=' in html
+
+    def test_fragment_keeps_the_current_filters(self, client):
+        # Лічильники мають відповідати тому, що зараз у стрічці, а не всій базі.
+        src = client.get("/?status=applied&source=dou").get_data(as_text=True)
+        assert "status=applied" in src and "source=dou" in src
+
+    def test_fragment_url_ignores_the_page(self, client):
+        # Талья рахує по всій вибірці, тож сторінка на неї не впливає — і не має
+        # плодити різні URL для однієї й тієї ж панелі.
+        html = client.get("/?page=2").get_data(as_text=True)
+        assert 'data-src="/filters/tags"' in html
+
+    def test_fragment_honours_the_token(self, tmp_path):
+        _seed(str(tmp_path))
+        client = create_app(
+            config={"webui": {"token": "s3cret"}}, runner=None
+        ).test_client()
+        assert client.get("/filters/tags").status_code == 403
+        assert client.get("/filters/tags?token=s3cret").status_code == 200

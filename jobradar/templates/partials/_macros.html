@@ -151,17 +151,12 @@
 </div>
 {% endmacro %}
 
+{#- Only the shell is rendered with the feed; the body arrives from /filters/tags
+    on first open. The summary's count comes from the URL, not from the tally. -#}
 {% macro pick_tags_popup(pt, params) %}
-<details class="pick" data-pick="tags">
+<details class="pick" data-pick="tags" data-src="{{ pt.src }}">
   <summary title="Search the list, select a few tags and hit Apply — the feed will keep vacancies that have ALL the selected ones. Exclude tags on /tags or via a chip above the feed.">tags{% if pt.included %} · {{ pt.included }}{% endif %} <span class="chev">▾</span></summary>
-  <form class="pick-panel" method="get" action="/">
-    {{ hidden_fields(params, ['status', 'source', 'q', 'min', 'l0', 'token', 'notech', 'co', 'sort', 'days']) }}
-    <input class="picksearch" type="text" placeholder="search a tag" aria-label="search a tag" autocomplete="off">
-    <div class="pick-scroll">
-      {% if pt.sections %}{% for sect in pt.sections %}<section class="pick-sect"><h4>{{ sect.name | group_label }}</h4>{% for row in sect.rows %}{{ pickrow('tech', row) }}{% endfor %}</section>{% endfor %}{% else %}<div class="pick-empty">No tags yet — run a scan.</div>{% endif %}
-    </div>
-    <div class="pick-actions"><button class="apply">Apply</button><a class="clear" href="{{ feed_link(params, tech='') }}">Reset</a></div>
-  </form>
+  <div class="pick-slot" data-testid="tags-panel"><div class="pick-empty">counting…</div></div>
 </details>
 {% endmacro %}
 

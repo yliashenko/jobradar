@@ -37,19 +37,22 @@ def render_card(row, threshold=7.0, params=None, query="", also_on=None):
 
 
 def render_pick(kind, conn, params):
-    """Render a tag/company pick-popup macro."""
-    data = (
-        views._pick_tags(conn, params)
-        if kind == "tags"
-        else views._pick_companies(conn, params)
-    )
-    macro = "pick_tags_popup" if kind == "tags" else "pick_companies_popup"
+    """Render a tag/company pick-popup body.
+
+    The tag popup's body is its own template since it loads on demand (the feed
+    ships only the shell), so this renders what /filters/tags serves.
+    """
     with _app().test_request_context():
+        if kind == "tags":
+            return flask.render_template(
+                "partials/_tags_panel.html",
+                params=params,
+                **views.pick_tags_context(conn, params),
+            )
         return flask.render_template_string(
-            "{% import 'partials/_macros.html' as ui %}{{ ui."
-            + macro
-            + "(data, params) }}",
-            data=data,
+            "{% import 'partials/_macros.html' as ui %}"
+            "{{ ui.pick_companies_popup(data, params) }}",
+            data=views._pick_companies(conn, params),
             params=params,
         )
 
@@ -1481,7 +1484,7 @@ class TestFilterUI:
             conn = self._conn(tmp)
             self._seed(conn)
             html = render_pick("tags", conn, {"status": "all"})
-            assert 'data-pick="tags"' in html
+            assert "pick-panel" in html
             assert "picksearch" in html  # пошук
             assert "<h4>" in html  # секції за групами
             assert 'name="tech" value="Playwright"' in html  # чекбокс-мультиселект
