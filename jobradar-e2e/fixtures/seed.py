@@ -97,6 +97,18 @@ CATALOG = [
         score=7.1, band="good", seen=days_ago(40)),
 ]
 
+# Bulk rows for the pager: the feed pages at views.FEED_PAGE, and the catalog is
+# deliberately smaller than one page so every other spec asserts on exact counts
+# without a pager in the way. A spec that wants a pager loads this set ON TOP of
+# the catalog (seedSet in fixtures/overlays.ts), and the per-test DB reset undoes
+# it. Distinct companies so company-grouping doesn't reorder the list; a single
+# shared tech term so the tag counts stay predictable.
+PAGING = [
+    vac(f"p{i}", f"QA Automation Engineer {i}", f"Paging Co {i}",
+        desc="Selenium", score=5.0, band="maybe")
+    for i in range(1, 31)
+]
+
 COLUMNS = [
     "hash", "source", "url", "title", "company", "description", "description_html",
     "first_seen", "published_at", "l0_pass", "status", "status_at", "score", "band",
@@ -110,7 +122,7 @@ def insert(conn, rows):
         [tuple(r[c] for c in COLUMNS) for r in rows],
     )
 
-SETS = {"catalog": CATALOG}
+SETS = {"catalog": CATALOG, "paging": PAGING}
 
 def main() -> int:
     which = sys.argv[1] if len(sys.argv) > 1 else "catalog"

@@ -91,3 +91,51 @@ test.describe('Tag filter', () => {
     await expect(page.locator(sel.jobCardOf('v1'))).toHaveCount(0);
   });
 });
+
+// Counting the tags means a regex pass over every matching description, so the
+// feed ships only the popup's shell and its body is fetched on first open.
+// That fetch is browser-side: nothing below this line is reachable server-side.
+test.describe('Tag picker popup', () => {
+  let feed: FeedPage;
+  test.beforeEach(async ({ page }) => { feed = new FeedPage(page); });
+
+  test('the feed ships the picker without its body @regression', async ({ page }) => {
+    await feed.open();
+    await expect(page.locator(sel.tagPicker)).toBeVisible();
+    await expect(feed.tagPanel()).toHaveCount(0);
+  });
+
+  test('opening the picker loads the tag list @smoke', async ({ page }) => {
+    await feed.open();
+    await feed.openTagPicker();
+    await expect(page.locator(sel.tagPickBox('Playwright'))).toBeAttached();
+  });
+
+  test('the loaded list counts the vacancies behind each tag @regression', async () => {
+    await feed.open();
+    await feed.openTagPicker();
+    // pytest is on v1, v4, v5 in the 'new' tab — the same three the tag filter keeps.
+    await expect(feed.tagPickRows().filter({ hasText: 'pytest' }).first()).toContainText('3');
+  });
+
+  test("the picker's search narrows the loaded list @regression", async () => {
+    await feed.open();
+    await feed.openTagPicker();
+    await feed.searchTagPicker('playw');
+    await expect(feed.visibleTagPickRows()).toHaveCount(1);
+  });
+
+  test('applying a tag from the picker filters the feed @regression', async ({ page }) => {
+    await feed.open();
+    await feed.openTagPicker();
+    await feed.applyTagFromPicker('pytest');
+    await expect(page).toHaveURL(/tech=pytest/);
+  });
+
+  test('applying a tag from the picker keeps only cards carrying it @regression', async () => {
+    await feed.open();
+    await feed.openTagPicker();
+    await feed.applyTagFromPicker('pytest');
+    await expect(feed.cards()).toHaveCount(3);
+  });
+});

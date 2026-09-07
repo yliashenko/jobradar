@@ -46,4 +46,65 @@ export class FeedPage extends BasePage {
   async openCompany(name: string): Promise<void> {
     await this.page.locator('a.co').filter({ hasText: name }).first().click();
   }
+
+  // ---- pager -------------------------------------------------------------
+
+  pager(): Locator {
+    return this.page.locator(sel.pager);
+  }
+
+  counts(): Locator {
+    return this.page.locator(sel.counts);
+  }
+
+  @step('go to the next page')
+  async nextPage(): Promise<void> {
+    await this.page.locator(sel.pagerNext).click();
+  }
+
+  @step('go to the previous page')
+  async prevPage(): Promise<void> {
+    await this.page.locator(sel.pagerPrev).click();
+  }
+
+  /** The hashes rendered on the current page, for overlap checks between pages. */
+  async cardHashes(): Promise<string[]> {
+    return this.cards().evaluateAll((els) =>
+      els.map((e) => e.getAttribute('data-hash') || ''),
+    );
+  }
+
+  // ---- tag picker popup --------------------------------------------------
+  // Its body is fetched on first open, so every locator below only resolves
+  // after openTagPicker().
+
+  tagPanel(): Locator {
+    return this.page.locator(sel.tagPanel);
+  }
+
+  tagPickRows(): Locator {
+    return this.page.locator(sel.tagPickRow);
+  }
+
+  /** Rows the popup's own search left visible (it hides, never removes). */
+  visibleTagPickRows(): Locator {
+    return this.page.locator(`${sel.tagPickRow}:visible`);
+  }
+
+  @step('open the tag picker')
+  async openTagPicker(): Promise<void> {
+    await this.page.locator(`${sel.tagPicker} > summary`).click();
+    await this.tagPanel().waitFor();
+  }
+
+  @step('search inside the tag picker')
+  async searchTagPicker(text: string): Promise<void> {
+    await this.page.locator(sel.tagPickSearch).fill(text);
+  }
+
+  @step('apply a tag from the picker')
+  async applyTagFromPicker(term: string): Promise<void> {
+    await this.page.locator(sel.tagPickBox(term)).check();
+    await this.page.locator(sel.tagPickApply).click();
+  }
 }
