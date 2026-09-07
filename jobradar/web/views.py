@@ -92,7 +92,7 @@ DOU_FEED_CAP = 25
 # (.desc is display:none until a card is unfolded) — ~2 s and 3.4 MB for a page
 # you read the top of. Paging is the honest fix: the ranking is unchanged, every
 # row stays reachable, and the work scales with what is on screen.
-FEED_PAGE = 50
+FEED_PAGE = 25
 
 PIE_COLORS = (
     "var(--petrol)",
