@@ -102,14 +102,13 @@ ROLES = {
             "дані",
             "керування",
         ),
-        # Djinni splits QA into separate, non-overlapping primary keywords: "QA"
-        # is manual/general, "Automation QA" is its own category (the on-target one
-        # for this role). Poll both — "QA" alone silently misses every automation
-        # vacancy that isn't cross-posted to DOU.
-        "djinni": [
-            DJINNI + "primary_keyword=QA",
-            DJINNI + "primary_keyword=Automation%20QA",
-        ],
+        # "Automation QA" is a real Djinni category in its API, but the RSS does
+        # NOT accept it as primary_keyword: an unrecognized keyword returns the
+        # whole board, 200 OK, no error (verified 07.09.2026 — it fed the radar
+        # media buyers and PMs for weeks). Only "QA" is a valid RSS keyword;
+        # automation-only postings are a known coverage gap, not a reason to
+        # keep a feed that silently returns everything.
+        "djinni": [DJINNI + "primary_keyword=QA"],
     },
     "frontend": {
         "label": "Frontend",
