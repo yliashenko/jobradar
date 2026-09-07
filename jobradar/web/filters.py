@@ -20,6 +20,7 @@ from jobradar.web.constants import (
     HIRING_JS,
     HIRING_LABELS,
     HIRING_ORDER,
+    PICK_JS,
     POPUP_JS,
     RADAR_ICON,
     SOURCE_LOGOS,
@@ -246,6 +247,7 @@ _GLOBALS = {
     "RADAR_ICON": Markup(RADAR_ICON),
     "ACCOUNT_ICON": Markup(ACCOUNT_ICON),
     "POPUP_JS": Markup(POPUP_JS),
+    "PICK_JS": Markup(PICK_JS),
     "COVER_JS": Markup(COVER_JS),
     "HIRING_JS": Markup(HIRING_JS),
 }

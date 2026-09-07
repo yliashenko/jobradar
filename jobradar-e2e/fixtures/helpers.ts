@@ -14,9 +14,9 @@ export const PYTHON =
     : 'python3');
 
 /** Run a Python script under JOBRADAR_HOME; resolves on exit 0, rejects otherwise. */
-export function runPython(script: string, home: string): Promise<void> {
+export function runPython(script: string, home: string, ...args: string[]): Promise<void> {
   return new Promise((resolvePromise, reject) => {
-    const p = spawn(PYTHON, [script], {
+    const p = spawn(PYTHON, [script, ...args], {
       cwd: REPO_ROOT,
       env: { ...process.env, JOBRADAR_HOME: home },
       stdio: ['ignore', 'ignore', 'pipe'],

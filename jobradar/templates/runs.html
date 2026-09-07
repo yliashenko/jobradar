@@ -57,6 +57,7 @@
       <span class="note bad">Warning: {{ funnel.fetched }} ≠ {{ funnel.triple }}. Records are being lost — that is a bug, not a quiet market.</span>
       {% endif %}
       {% if funnel.revived %}<span class="note">Of those, {{ funnel.revived }} — roles reopened after a pause of over half a year.</span>{% endif %}
+      {% if funnel.scoring_failed %}<span class="note bad" data-testid="scoring-failed">The scorer failed on {{ funnel.scoring_failed }} of them — those were not judged and not sent. Check the API key and model on the Settings page; they are waiting unscored in the feed.</span>{% endif %}
     </div>
   </div>
 </div>

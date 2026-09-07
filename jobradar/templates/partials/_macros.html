@@ -147,21 +147,16 @@
   <div class="tabs">
     {% for tab in t.tabs %}<a class="tab{% if tab.on %} on{% endif %}" href="{{ tab.href }}">{{ tab.label }} <span class="n">{{ tab.count }}</span></a>{% endfor %}
   </div>
-  {% if t.shown is not none %}<span class="counts"><b>{{ t.total }}</b> in the database · shown <b>{{ t.shown }}</b></span>{% endif %}
+  {% if t.shown is not none %}<span class="counts"><b>{{ t.total }}</b> in the database · shown <b>{{ t.shown }}</b>{% if t.matching is not none and t.matching != t.shown %} of <b>{{ t.matching }}</b>{% endif %}</span>{% endif %}
 </div>
 {% endmacro %}
 
+{#- Only the shell is rendered with the feed; the body arrives from /filters/tags
+    on first open. The summary's count comes from the URL, not from the tally. -#}
 {% macro pick_tags_popup(pt, params) %}
-<details class="pick" data-pick="tags">
+<details class="pick" data-pick="tags" data-src="{{ pt.src }}">
   <summary title="Search the list, select a few tags and hit Apply — the feed will keep vacancies that have ALL the selected ones. Exclude tags on /tags or via a chip above the feed.">tags{% if pt.included %} · {{ pt.included }}{% endif %} <span class="chev">▾</span></summary>
-  <form class="pick-panel" method="get" action="/">
-    {{ hidden_fields(params, ['status', 'source', 'q', 'min', 'l0', 'token', 'notech', 'co', 'sort', 'days']) }}
-    <input class="picksearch" type="text" placeholder="search a tag" aria-label="search a tag" autocomplete="off">
-    <div class="pick-scroll">
-      {% if pt.sections %}{% for sect in pt.sections %}<section class="pick-sect"><h4>{{ sect.name | group_label }}</h4>{% for row in sect.rows %}{{ pickrow('tech', row) }}{% endfor %}</section>{% endfor %}{% else %}<div class="pick-empty">No tags yet — run a scan.</div>{% endif %}
-    </div>
-    <div class="pick-actions"><button class="apply">Apply</button><a class="clear" href="{{ feed_link(params, tech='') }}">Reset</a></div>
-  </form>
+  <div class="pick-slot" data-testid="tags-panel"><div class="pick-empty">counting…</div></div>
 </details>
 {% endmacro %}
 
@@ -199,4 +194,14 @@
   {{ pick_companies_popup(pick_companies, params) }}
   {% if f.filters_active %}<a class="clearfilters" href="{{ feed_link(params, source='', q='', min='', l0='', days='', tech='', notech='', co='') }}" title="Reset every filter (keeps the current tab and sort)">Clear filters</a>{% endif %}
 </div>
+{% endmacro %}
+
+{% macro pager(pg) %}
+{% if pg and pg.pages > 1 %}
+<nav class="pager" data-testid="pager" aria-label="feed pages">
+  {% if pg.prev %}<a class="pgstep" href="{{ pg.prev }}" rel="prev" data-testid="pager-prev">← newer</a>{% else %}<span class="pgstep off">← newer</span>{% endif %}
+  <span class="pgwhere">page <b>{{ pg.page }}</b> of {{ pg.pages }}</span>
+  {% if pg.next %}<a class="pgstep" href="{{ pg.next }}" rel="next" data-testid="pager-next">older →</a>{% else %}<span class="pgstep off">older →</span>{% endif %}
+</nav>
+{% endif %}
 {% endmacro %}

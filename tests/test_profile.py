@@ -37,19 +37,22 @@ def render_card(row, threshold=7.0, params=None, query="", also_on=None):
 
 
 def render_pick(kind, conn, params):
-    """Render a tag/company pick-popup macro."""
-    data = (
-        views._pick_tags(conn, params)
-        if kind == "tags"
-        else views._pick_companies(conn, params)
-    )
-    macro = "pick_tags_popup" if kind == "tags" else "pick_companies_popup"
+    """Render a tag/company pick-popup body.
+
+    The tag popup's body is its own template since it loads on demand (the feed
+    ships only the shell), so this renders what /filters/tags serves.
+    """
     with _app().test_request_context():
+        if kind == "tags":
+            return flask.render_template(
+                "partials/_tags_panel.html",
+                params=params,
+                **views.pick_tags_context(conn, params),
+            )
         return flask.render_template_string(
-            "{% import 'partials/_macros.html' as ui %}{{ ui."
-            + macro
-            + "(data, params) }}",
-            data=data,
+            "{% import 'partials/_macros.html' as ui %}"
+            "{{ ui.pick_companies_popup(data, params) }}",
+            data=views._pick_companies(conn, params),
             params=params,
         )
 
@@ -1020,6 +1023,61 @@ class TestDjinni:
     def test_role_supplies_djinni_feed(self):
         assert any("djinni.co" in f for f in roles.djinni_feeds("qa_automation"))
 
+    def test_role_ships_only_rss_keywords_djinni_accepts(self):
+        # "Automation QA" existує в API Djinni, але RSS його НЕ приймає й тихо
+        # віддає всю дошку. Фід із таким ключем не має лишатися у ролі.
+        assert not any("Automation" in f for f in roles.djinni_feeds("qa_automation"))
+
+    def _rss(self, *ids):
+        items = "".join(
+            f"<item><title>Job {i}</title>"
+            f"<link>https://djinni.co/jobs/{i}-x/</link>"
+            "<description>d</description></item>"
+            for i in ids
+        )
+        return f'<?xml version="1.0"?><rss><channel>{items}</channel></rss>'
+
+    def _collect(self, rss, api_ids):
+        """collect_djinni з ін'єктованим http: RSS для фіда, JSON для API."""
+        import json as _json
+
+        from jobradar.core.collectors import djinni
+
+        def fetch(url, timeout=25):
+            if "/api/jobs/" in url:
+                results = [{"id": i, "company_name": "C"} for i in api_ids]
+                return _json.dumps(
+                    {"results": results, "count": len(results), "limit": 100}
+                )
+            return rss
+
+        report = []
+        jobs = djinni.collect_djinni(
+            ["https://djinni.co/jobs/rss/?primary_keyword=Automation%20QA"],
+            report=report,
+            request_delay=0,
+            http=fetch,
+        )
+        return jobs, report[0]
+
+    def test_ignored_keyword_feed_is_dropped_and_flagged(self):
+        # RSS віддав дошку: жоден із його id не належить категорії ключа.
+        jobs, entry = self._collect(self._rss(1, 2, 3, 4), api_ids=[90, 91, 92])
+        assert jobs == []
+        assert "ignored primary_keyword" in entry["error"]
+        assert entry["count"] == 0
+
+    def test_honoured_keyword_feed_passes_through(self):
+        jobs, entry = self._collect(self._rss(1, 2, 3, 4), api_ids=[1, 2, 3, 4])
+        assert len(jobs) == 4
+        assert entry["error"] == "" and entry["count"] == 4
+
+    def test_dead_api_leaves_the_feed_alone(self):
+        # Порожня мапа = API лежить. Тоді рішення не ухвалюємо — RSS лишається,
+        # як і було до перевірки (fail-safe).
+        jobs, entry = self._collect(self._rss(1, 2), api_ids=[])
+        assert len(jobs) == 2 and entry["error"] == ""
+
     def test_effective_djinni_feeds_from_role(self):
         import tempfile
 
@@ -1426,7 +1484,7 @@ class TestFilterUI:
             conn = self._conn(tmp)
             self._seed(conn)
             html = render_pick("tags", conn, {"status": "all"})
-            assert 'data-pick="tags"' in html
+            assert "pick-panel" in html
             assert "picksearch" in html  # пошук
             assert "<h4>" in html  # секції за групами
             assert 'name="tech" value="Playwright"' in html  # чекбокс-мультиселект

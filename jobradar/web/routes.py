@@ -108,6 +108,23 @@ def feed():
     )
 
 
+@bp.route("/filters/tags")
+def filters_tags():
+    """The tag popup's body. Split off the feed because counting the tags means
+    running the skills regex over every matching description — work worth doing
+    when the popup is actually opened, not on every page load."""
+    params = _params()
+    require_token(params.get("token", ""))
+    conn = get_db()
+    if conn is None:
+        return ""
+    return render_template(
+        "partials/_tags_panel.html",
+        params=params,
+        **views.pick_tags_context(conn, params),
+    )
+
+
 @bp.route("/company")
 def company():
     params = _params()

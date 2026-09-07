@@ -62,9 +62,19 @@ Respond with STRICTLY valid JSON, no markdown fence, in the format:
 {{"score": 7.5, "band": "worth_trying", "matched": ["..."], "gaps": ["..."], "verdict": "..."}}"""
 
 
-def empty_row():
-    """A "no score" row — when the scorer is disabled or failed."""
-    return {"score": None, "band": "", "matched": [], "gaps": [], "verdict": ""}
+def empty_row(error=""):
+    """A "no score" row. `error` separates the two reasons it can be empty:
+    the scorer is deliberately OFF (empty — everything past L0 is a candidate)
+    versus the call FAILED (a message — the vacancy was never judged). The
+    pipeline notifies on the first and must not on the second."""
+    return {
+        "score": None,
+        "band": "",
+        "matched": [],
+        "gaps": [],
+        "verdict": "",
+        "error": error,
+    }
 
 
 def parse_scorer_response(text):
@@ -167,7 +177,7 @@ class LlmScorer:
             )
         except Exception as exc:
             log.error("Scoring failed for %r: %s", (job.get("title") or "")[:60], exc)
-            return empty_row()
+            return empty_row(error=str(exc) or exc.__class__.__name__)
         if self.request_delay:
             time.sleep(self.request_delay)
         return row

@@ -98,6 +98,25 @@ POPUP_JS = (
     "})();"
 )
 
+# The tag popup fills itself on first open: counting tags costs a regex pass over
+# every matching description, so the feed ships the shell and this fetches the
+# body once per page. Failure is visible in the panel — a popup that silently
+# stays empty would read as "no tags", which is a different thing entirely.
+PICK_JS = (
+    "(function(){document.addEventListener('toggle',function(e){"
+    "var d=e.target;if(!d.classList||!d.classList.contains('pick'))return;"
+    "if(!d.open||d.dataset.loaded)return;var u=d.getAttribute('data-src');"
+    "var slot=d.querySelector('.pick-slot');if(!u||!slot)return;"
+    "d.dataset.loaded='1';"
+    "fetch(u,{headers:{'X-Requested-With':'fetch'}})"
+    ".then(function(r){if(!r.ok)throw 0;return r.text();})"
+    ".then(function(h){slot.innerHTML=h;})"
+    ".catch(function(){delete d.dataset.loaded;"
+    "slot.innerHTML='<div class=\"pick-empty\">Could not load the tags. '"
+    "+'Close and open again.</div>';});"
+    "},true);})();"
+)
+
 # Cover-letter generation on the hiring cards: the ✍ button POSTs to /hiring/cover,
 # shows a spinner while Sonnet writes, then fills the modal (letter, evaluation,
 # traceability, fit band) and flips the button to Regenerate. Copy uses the

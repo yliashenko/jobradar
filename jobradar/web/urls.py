@@ -86,8 +86,13 @@ def build_query(params, **overrides):
 
 
 def feed_link(params, **overrides):
-    """Link into the feed keeping filters, dropping page-specific params."""
-    clean = {k: v for k, v in params.items() if k != "run"}
+    """Link into the feed keeping filters, dropping page-specific params.
+
+    `page` is dropped too, so changing a tab, a filter or a tag lands on the
+    first page of the new result instead of page 7 of the old one. The pager
+    itself passes page= explicitly, and an override always wins.
+    """
+    clean = {k: v for k, v in params.items() if k not in ("run", "page")}
     return "/?" + build_query(clean, **overrides)
 
 

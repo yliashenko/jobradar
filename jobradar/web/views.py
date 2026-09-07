@@ -87,6 +87,13 @@ WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 # only way the radar can silently drop rows, so /runs flags it.
 DOU_FEED_CAP = 25
 
+# Cards per feed page. The feed used to render its whole result at once, which
+# meant highlighting and tagging hundreds of descriptions that are collapsed
+# (.desc is display:none until a card is unfolded) — ~2 s and 3.4 MB for a page
+# you read the top of. Paging is the honest fix: the ranking is unchanged, every
+# row stays reachable, and the work scales with what is on screen.
+FEED_PAGE = 25
+
 PIE_COLORS = (
     "var(--petrol)",
     "var(--accent)",
@@ -184,12 +191,16 @@ def _feeds(raw_feeds):
 
 def _funnel(run):
     total = run["dup_skipped"] + run["l0_dropped"] + run["added"]
+    keys = run.keys()
     return {
         "fetched": run["fetched"],
         "dup_skipped": run["dup_skipped"],
         "l0_dropped": run["l0_dropped"],
         "added": run["added"],
         "revived": run["revived"],
+        # A run whose scorer broke sent nothing — the same shape as a quiet
+        # market unless the number is on the page (CLAUDE.md §4).
+        "scoring_failed": run["scoring_failed"] if "scoring_failed" in keys else 0,
         "triple": f"{run['dup_skipped']} + {run['l0_dropped']} + {run['added']}",
         "converges": total == run["fetched"],
     }
@@ -681,7 +692,30 @@ def _group(rows):
     return items
 
 
-def _tabs(params, counts, total, shown):
+def _page_number(params, matching):
+    """1-based page, clamped into range. Clamping matters because every other
+    link resets `page` (feed_link drops it) — a stale one only ever arrives by
+    hand, and landing on an empty page would read as "the filter found nothing"."""
+    pages = max(1, -(-matching // FEED_PAGE))
+    try:
+        page = int(params.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    return min(max(page, 1), pages)
+
+
+def _pager(params, page, matching):
+    pages = max(1, -(-matching // FEED_PAGE))
+    return {
+        "page": page,
+        "pages": pages,
+        "matching": matching,
+        "prev": feed_link(params, page=page - 1) if page > 1 else "",
+        "next": feed_link(params, page=page + 1) if page < pages else "",
+    }
+
+
+def _tabs(params, counts, total, shown, matching=None):
     status = params.get("status", "new")
     tabs = []
     for key in ("new", "interested", "applied", "skipped", "all"):
@@ -698,6 +732,9 @@ def _tabs(params, counts, total, shown):
         "tabs": tabs,
         "total": total,
         "shown": shown,
+        # How many the current filters match — differs from `shown` as soon as
+        # the result spans more than one page.
+        "matching": matching,
     }
 
 
@@ -718,6 +755,26 @@ def _filters(conn, params):
         "score_opts": SCORE_OPTS,
         "filters_active": any(params.get(k) for k in filter_keys),
     }
+
+
+def tags_popup_stub(params):
+    """What the feed needs to draw the CLOSED tag popup: the chosen-tag count
+    (straight from the URL) and where to fetch the body from. Deliberately does
+    not touch the database — counting the tags is `pick_tags_context`, and it is
+    the single most expensive thing the feed used to do unasked."""
+    included, _ = tech_sets(params)
+    # `page` is dropped: the counts cover the whole match, not one page, so
+    # carrying it would only give the same panel a different URL per page.
+    query = build_query({k: v for k, v in params.items() if k != "page"})
+    return {
+        "included": len(included),
+        "src": "/filters/tags" + (("?" + query) if query else ""),
+    }
+
+
+def pick_tags_context(conn, params) -> dict:
+    """Context for the tag popup body, served on demand."""
+    return {"pick_tags": _pick_tags(conn, params)}
 
 
 def _pick_tags(conn, params):
@@ -823,7 +880,7 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     sql = "SELECT * FROM jobs"
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY " + _order_by(_effective_sort(params)) + " LIMIT 300"
+    sql += " ORDER BY " + _order_by(_effective_sort(params))
     rows = conn.execute(sql, args).fetchall()
 
     included, excluded = tech_sets(params)
@@ -847,6 +904,12 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     if muted:
         rows = [r for r in rows if not title_muted(r["title"])]
 
+    # Tag and "not for me" filters run in Python (word boundaries LIKE can't do),
+    # so the page is cut only here — after everything that decides a match.
+    matching = len(rows)
+    page = _page_number(params, matching)
+    rows = rows[(page - 1) * FEED_PAGE : page * FEED_PAGE]
+
     counts: dict = {}
     for r in conn.execute(
         "SELECT status, title FROM jobs WHERE l0_pass = 1 AND status != 'archived'"
@@ -858,9 +921,10 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     ctx = {
         "has_jobs": bool(rows),
         "empty": _empty_feed(params),
-        "tabs": _tabs(params, counts, sum(counts.values()), len(rows)),
+        "tabs": _tabs(params, counts, sum(counts.values()), len(rows), matching),
+        "pager": _pager(params, page, matching),
         "filters": _filters(conn, params),
-        "pick_tags": _pick_tags(conn, params),
+        "pick_tags": tags_popup_stub(params),
         "pick_companies": _pick_companies(conn, params),
         "runbox": _runbox(conn, run_status, query),
         "threshold": threshold,

@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS runs (
     added        INTEGER NOT NULL DEFAULT 0,
     revived      INTEGER NOT NULL DEFAULT 0,
     notified     INTEGER NOT NULL DEFAULT 0,
+    scoring_failed INTEGER NOT NULL DEFAULT 0,
     feeds        TEXT NOT NULL DEFAULT ''
 );
 
@@ -195,6 +196,15 @@ def migrate(conn):
         conn.execute("UPDATE jobs SET status = 'skipped' WHERE status = 'rejected'")
         conn.commit()
         log.info("Migration: renamed status 'rejected' to 'skipped'")
+    runs_cols = {row["name"] for row in conn.execute("PRAGMA table_info(runs)")}
+    if "scoring_failed" not in runs_cols:
+        # Runs logged before the counter existed stay 0 — the number wasn't
+        # recorded, and inventing one would hide exactly what it exists to show.
+        conn.execute(
+            "ALTER TABLE runs ADD COLUMN scoring_failed INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
+        log.info("Migration: added column runs.scoring_failed")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
     conn.commit()
 
@@ -237,7 +247,8 @@ def run_start(conn, triggered_by):
 def run_finish(conn, run_id, feeds, counters):
     conn.execute(
         """UPDATE runs SET finished_at = ?, fetched = ?, dup_skipped = ?, l0_dropped = ?,
-                           added = ?, revived = ?, notified = ?, feeds = ?
+                           added = ?, revived = ?, notified = ?, scoring_failed = ?,
+                           feeds = ?
            WHERE id = ?""",
         (
             now_iso(),
@@ -247,6 +258,7 @@ def run_finish(conn, run_id, feeds, counters):
             counters.get("added", 0),
             counters.get("revived", 0),
             counters.get("notified", 0),
+            counters.get("scoring_failed", 0),
             json.dumps(feeds, ensure_ascii=False),
             run_id,
         ),

@@ -21,6 +21,15 @@ log = logging.getLogger("jobradar")
 
 DJINNI_API = "https://djinni.co/api/jobs/"
 
+# An RSS primary_keyword Djinni doesn't recognize is not an error: the feed
+# answers 200 with the WHOLE board (verified 07.09.2026 — a nonsense keyword and
+# "Automation QA" return byte-identical listings of media buyers and PMs). The
+# only signal is that those ids are absent from the same keyword's API category:
+# a real keyword overlaps ~100%, an ignored one ~4%. Below this share we treat
+# the filter as ignored and drop the feed rather than pour a whole job board
+# into the pipeline.
+KEYWORD_MIN_OVERLAP = 0.5
+
 
 def _djinni_salary(j):
     lo, hi = j.get("public_salary_min"), j.get("public_salary_max")
@@ -72,6 +81,21 @@ def djinni_api_details(keyword, request_delay=1.0, cap=200, http=None):
     return out
 
 
+def _item_id(item):
+    found = re.search(r"/jobs/(\d+)", (item.findtext("link") or "").strip())
+    return found.group(1) if found else ""
+
+
+def _keyword_ignored(items, details):
+    """True when the RSS items are mostly NOT in the API category of the same
+    keyword — i.e. Djinni served the unfiltered board instead of the filter."""
+    ids = [i for i in (_item_id(it) for it in items) if i]
+    if not ids:
+        return False
+    hits = sum(1 for i in ids if i in details)
+    return (hits / len(ids)) < KEYWORD_MIN_OVERLAP
+
+
 def collect_djinni(feed_urls, report=None, request_delay=1.0, enrich=True, http=None):
     """Djinni via the OFFICIAL RSS (/jobs/rss/?primary_keyword=…), not scraping.
 
@@ -109,6 +133,17 @@ def collect_djinni(feed_urls, report=None, request_delay=1.0, enrich=True, http=
             if (enrich and km)
             else {}
         )
+        if details and _keyword_ignored(items, details):
+            # No extra request: the overlap falls out of the enrichment map we
+            # already have. An empty map means the API itself is down — then we
+            # decide nothing and keep the RSS rows, as before.
+            entry["error"] = "Djinni ignored primary_keyword — returned the whole board"
+            entry["count"] = 0
+            log.warning(
+                "Djinni ignored the keyword in %s — the feed returns the whole board, skipping",
+                url,
+            )
+            continue
         for item in items:
             link = (item.findtext("link") or "").strip()
             title = (item.findtext("title") or "").strip()

@@ -4,7 +4,9 @@ Two functions — GET (text) and POST JSON. Split out so collectors and the scor
 don't duplicate headers and decoding, and tests can swap a single network point.
 """
 
+import contextlib
 import json
+import urllib.error
 import urllib.request
 
 USER_AGENT = (
@@ -26,5 +28,16 @@ def http_post_json(url, payload, headers, timeout=60):
     merged = {"Content-Type": "application/json", "User-Agent": USER_AGENT}
     merged.update(headers)
     req = urllib.request.Request(url, data=body, headers=merged, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as exc:
+        # urllib's own message is just "HTTP Error 400: Bad Request" — the reason
+        # (a wrong model, an expired key) is only in the body, and swallowing it
+        # leaves the log with nothing actionable.
+        detail = ""
+        with contextlib.suppress(Exception):
+            detail = exc.read().decode("utf-8", errors="replace")[:400].strip()
+        raise RuntimeError(
+            f"HTTP {exc.code} from {url}" + (f": {detail}" if detail else "")
+        ) from exc

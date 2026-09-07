@@ -59,7 +59,9 @@ def run(cfg, args, http=None, scorer=None, notify=None):
     if new_jobs:
         meta_set(conn, "last_new_job_at", now_iso())
 
-    counters["notified"] = _score_and_notify(conn, cfg, new_jobs, args, scorer, notify)
+    counters["notified"], counters["scoring_failed"] = _score_and_notify(
+        conn, cfg, new_jobs, args, scorer, notify
+    )
     run_finish(conn, run_id, feeds, counters)
     heartbeat(conn, args.dry_run, notify)
     conn.close()
@@ -174,8 +176,15 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
         log.warning("Telegram is on but not configured — matches won't be delivered")
 
     sent = 0
+    failed = []
     for job in new_jobs:
         row = scorer.score(job)
+        if row.get("error"):
+            # The scorer is ON but the call broke — the vacancy was never judged.
+            # Sending it anyway is how a broken API key turns the chat into an
+            # unfiltered feed of the whole board (silent failure, CLAUDE.md §4).
+            failed.append((job, row["error"]))
+            continue
         if row["score"] is not None:
             conn.execute(
                 """UPDATE jobs SET score = ?, band = ?, verdict = ?, matched = ?, gaps = ?,
@@ -214,7 +223,36 @@ def _score_and_notify(conn, cfg, new_jobs, args, scorer=None, notify=telegram_se
                 )
                 conn.commit()
     log.info("Messages sent: %d", sent)
-    return sent
+    if failed:
+        _alert_scoring_broken(failed, len(new_jobs), notify_on, args, notify)
+    return sent, len(failed)
+
+
+def _alert_scoring_broken(failed, total, notify_on, args, notify):
+    """One message per run when the scorer broke — not one per vacancy.
+
+    Without it the fix above is itself a silent failure: nothing reaches Telegram
+    and a dead API key looks exactly like a quiet market (CLAUDE.md §4).
+    """
+    reason = failed[0][1]
+    log.warning(
+        "Scoring failed for %d of %d vacancies — not sent to Telegram. First error: %s",
+        len(failed),
+        total,
+        reason,
+    )
+    if not notify_on:
+        return
+    bot_token, chat_id = effective_telegram()
+    if not (bot_token and chat_id):
+        return
+    text = (
+        f"⚠️ <b>jobradar: the scorer is broken</b>\n"
+        f"{len(failed)} of {total} vacancies were not scored and therefore not sent "
+        "— they're waiting in the web feed unscored.\n"
+        f"Error: {escape(reason[:300])}"
+    )
+    notify(bot_token, chat_id, text, args.dry_run)
 
 
 def heartbeat(conn, dry_run, notify=telegram_send):

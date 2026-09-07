@@ -14,7 +14,7 @@ import pytest
 from jobradar import clock, paths
 from jobradar.app import create_app
 from jobradar.core import db as dbmod
-from jobradar.web import routes
+from jobradar.web import routes, views
 
 _JOB_COLS = [
     "hash",
@@ -619,3 +619,142 @@ class TestFeedSort:
     def test_sort_score_ascending(self, client):
         html = client.get("/?status=all&sort=score_asc").get_data(as_text=True)
         assert html.index("Middle QA") < html.index("Senior QA Automation Engineer")
+
+
+class TestFeedPaging:
+    """Стрічка сторінкується. Раніше вона рендерила весь результат одразу —
+    незбалені сортуються останніми, тож при обриві саме вони зникали зі списку,
+    хоч пошук їх знаходив."""
+
+    def _fill(self, tmp_path, count):
+        _seed(str(tmp_path))
+        conn = dbmod.db_connect()
+        for i in range(count):
+            _insert(
+                conn,
+                hash=f"bulk{i}",
+                source="djinni",
+                url=f"https://djinni.co/bulk{i}",
+                title=f"Media Planner {i}",
+                company="",
+                description="QA тестування гіпотез",
+                first_seen="2026-08-20",
+            )
+        conn.commit()
+        conn.close()
+        return create_app(config={}, runner=None).test_client()
+
+    def test_short_feed_has_no_pager(self, client):
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-testid="pager"' not in html
+
+    def test_long_feed_renders_one_page_and_a_pager(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE * 2)
+        html = client.get("/").get_data(as_text=True)
+        assert html.count('data-testid="job-card"') == views.FEED_PAGE
+        assert 'data-testid="pager-next"' in html
+        assert 'data-testid="pager-prev"' not in html
+
+    def test_counter_names_the_full_match_not_just_the_page(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE * 2)
+        html = client.get("/").get_data(as_text=True)
+        assert f"shown <b>{views.FEED_PAGE}</b> of <b>" in html
+
+    def test_second_page_holds_the_rest(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE + 3)
+        first = client.get("/").get_data(as_text=True)
+        second = client.get("/?page=2").get_data(as_text=True)
+        assert 'data-testid="pager-prev"' in second
+        assert 'data-testid="pager-next"' not in second
+        # Жодна вакансія не втрачена й не задубльована між сторінками.
+        import re
+
+        def hashes(html):
+            return set(re.findall(r'data-testid="job-card" data-hash="([^"]+)"', html))
+
+        assert not (hashes(first) & hashes(second))
+        assert len(hashes(first) | hashes(second)) == views.FEED_PAGE + 3 + 2
+
+    def test_page_out_of_range_is_clamped_not_empty(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE + 3)
+        html = client.get("/?page=99").get_data(as_text=True)
+        assert 'data-testid="job-card"' in html
+
+    def test_garbage_page_falls_back_to_the_first(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_PAGE + 3)
+        html = client.get("/?page=nonsense").get_data(as_text=True)
+        assert html.count('data-testid="job-card"') == views.FEED_PAGE
+
+    def test_filter_links_reset_the_page(self, tmp_path):
+        # Інакше зміна фільтра лишала б тебе на 7-й сторінці нового результату.
+        from jobradar.web.urls import feed_link
+
+        assert "page=" not in feed_link({"page": "7", "status": "new"}, status="all")
+
+
+class TestRunsScoringFailures:
+    """Виправлення «не слати незбалені» саме по собі мовчазне: чат порожній,
+    і мертвий ключ виглядає як тихий ринок. /runs має показати число."""
+
+    def _run(self, tmp_path, scoring_failed):
+        _seed(str(tmp_path))
+        conn = dbmod.db_connect()
+        conn.execute(
+            "INSERT INTO runs(started_at, finished_at, triggered_by, fetched, added,"
+            " notified, scoring_failed) VALUES(?,?,'cron',?,?,?,?)",
+            ("2026-08-20T09:00", "2026-08-20T09:05", 10, 4, 0, scoring_failed),
+        )
+        conn.commit()
+        conn.close()
+        return create_app(config={}, runner=None).test_client()
+
+    def test_failures_are_flagged(self, tmp_path):
+        html = self._run(tmp_path, 4).get("/runs").get_data(as_text=True)
+        assert 'data-testid="scoring-failed"' in html
+        assert "The scorer failed on 4" in html
+
+    def test_clean_run_shows_no_marker(self, tmp_path):
+        html = self._run(tmp_path, 0).get("/runs").get_data(as_text=True)
+        assert 'data-testid="scoring-failed"' not in html
+
+
+class TestLazyTagPopup:
+    """Лічильники тегів = регекс на 320 термінів по кожному опису у вибірці.
+    Попап закритий за замовчуванням, тож стрічка віддає лише оболонку."""
+
+    def test_feed_ships_the_shell_without_counting(self, client):
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-pick="tags"' in html
+        assert 'data-testid="tags-panel"' in html
+        # Тіла попапа у стрічці немає — ні чекбоксів, ні секцій.
+        assert 'name="tech" value=' not in html
+
+    def test_shell_points_at_the_fragment(self, client):
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-src="/filters/tags' in html
+
+    def test_fragment_serves_the_counted_panel(self, client):
+        resp = client.get("/filters/tags?status=all")
+        assert resp.status_code == 200
+        html = resp.get_data(as_text=True)
+        assert "pick-panel" in html and "picksearch" in html
+        assert 'name="tech" value=' in html
+
+    def test_fragment_keeps_the_current_filters(self, client):
+        # Лічильники мають відповідати тому, що зараз у стрічці, а не всій базі.
+        src = client.get("/?status=applied&source=dou").get_data(as_text=True)
+        assert "status=applied" in src and "source=dou" in src
+
+    def test_fragment_url_ignores_the_page(self, client):
+        # Талья рахує по всій вибірці, тож сторінка на неї не впливає — і не має
+        # плодити різні URL для однієї й тієї ж панелі.
+        html = client.get("/?page=2").get_data(as_text=True)
+        assert 'data-src="/filters/tags"' in html
+
+    def test_fragment_honours_the_token(self, tmp_path):
+        _seed(str(tmp_path))
+        client = create_app(
+            config={"webui": {"token": "s3cret"}}, runner=None
+        ).test_client()
+        assert client.get("/filters/tags").status_code == 403
+        assert client.get("/filters/tags?token=s3cret").status_code == 200

@@ -81,3 +81,30 @@ def test_default_provider_is_anthropic():
 def test_openai_empty_choices_is_empty_string():
     out = llm._openai_text({"choices": []})
     assert out == ""
+
+
+def test_http_post_json_surfaces_the_api_error_body(monkeypatch):
+    """Голий urllib каже лише "HTTP Error 400: Bad Request" — причина (не та
+    модель, протермінований ключ) є тільки в тілі відповіді."""
+    import io
+    import urllib.error
+
+    from jobradar.core import http
+
+    def boom(req, timeout=None):
+        raise urllib.error.HTTPError(
+            req.full_url,
+            400,
+            "Bad Request",
+            {},
+            io.BytesIO(b'{"error":{"message":"model: unknown model"}}'),
+        )
+
+    monkeypatch.setattr(http.urllib.request, "urlopen", boom)
+    try:
+        http.http_post_json("https://api.example/v1/messages", {}, {})
+    except RuntimeError as exc:
+        assert "400" in str(exc)
+        assert "unknown model" in str(exc)
+    else:
+        raise AssertionError("a 400 must raise")
