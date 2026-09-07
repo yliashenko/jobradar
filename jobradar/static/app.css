@@ -579,6 +579,13 @@ form.filters {
   color: var(--petrol);
 }
 
+/* The list is cut at FEED_LIMIT — quiet, but never invisible. */
+.tabrow .counts .cap {
+  color: var(--dim);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
 /* A tag looks the same everywhere — in the menu, on the card, in the cloud.
    Terracotta border: a tag filters someone else's content, it isn't a UI action,
    and shouldn't be confused with the green buttons. */

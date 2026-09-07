@@ -87,6 +87,11 @@ WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 # only way the radar can silently drop rows, so /runs flags it.
 DOU_FEED_CAP = 25
 
+# How many cards one feed page renders. The list is deliberately unpaginated —
+# the tool ranks, it doesn't archive — but the cut has to be VISIBLE: silently
+# showing 300 of 600 looks like the missing ones were never collected.
+FEED_LIMIT = 300
+
 PIE_COLORS = (
     "var(--petrol)",
     "var(--accent)",
@@ -685,7 +690,7 @@ def _group(rows):
     return items
 
 
-def _tabs(params, counts, total, shown):
+def _tabs(params, counts, total, shown, capped=False):
     status = params.get("status", "new")
     tabs = []
     for key in ("new", "interested", "applied", "skipped", "all"):
@@ -702,6 +707,8 @@ def _tabs(params, counts, total, shown):
         "tabs": tabs,
         "total": total,
         "shown": shown,
+        "capped": capped,
+        "cap": FEED_LIMIT,
     }
 
 
@@ -827,8 +834,15 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     sql = "SELECT * FROM jobs"
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY " + _order_by(_effective_sort(params)) + " LIMIT 300"
+    sql += (
+        " ORDER BY " + _order_by(_effective_sort(params)) + f" LIMIT {FEED_LIMIT + 1}"
+    )
     rows = conn.execute(sql, args).fetchall()
+    # One row over the limit only to learn that the cut happened. Unscored rows
+    # sort last, so a truncated feed hides exactly them — findable by search but
+    # invisible in the list, which reads as "the vacancy is gone".
+    capped = len(rows) > FEED_LIMIT
+    rows = rows[:FEED_LIMIT]
 
     included, excluded = tech_sets(params)
     if included or excluded:
@@ -862,7 +876,7 @@ def feed_context(conn, params, threshold, run_status, query="") -> dict:
     ctx = {
         "has_jobs": bool(rows),
         "empty": _empty_feed(params),
-        "tabs": _tabs(params, counts, sum(counts.values()), len(rows)),
+        "tabs": _tabs(params, counts, sum(counts.values()), len(rows), capped),
         "filters": _filters(conn, params),
         "pick_tags": _pick_tags(conn, params),
         "pick_companies": _pick_companies(conn, params),

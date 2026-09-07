@@ -14,7 +14,7 @@ import pytest
 from jobradar import clock, paths
 from jobradar.app import create_app
 from jobradar.core import db as dbmod
-from jobradar.web import routes
+from jobradar.web import routes, views
 
 _JOB_COLS = [
     "hash",
@@ -619,6 +619,45 @@ class TestFeedSort:
     def test_sort_score_ascending(self, client):
         html = client.get("/?status=all&sort=score_asc").get_data(as_text=True)
         assert html.index("Middle QA") < html.index("Senior QA Automation Engineer")
+
+
+class TestFeedCap:
+    """Стрічка ріже список на FEED_LIMIT. Незбалені (score IS NULL) сортуються
+    останніми, тож саме вони зникають — у БД є, пошук їх знаходить, а в списку
+    їх немає. Мовчазний обрив і є багом; сам ліміт — свідомий."""
+
+    def _fill(self, tmp_path, count):
+        _seed(str(tmp_path))
+        conn = dbmod.db_connect()
+        for i in range(count):
+            _insert(
+                conn,
+                hash=f"bulk{i}",
+                source="djinni",
+                url=f"https://djinni.co/bulk{i}",
+                title=f"Media Planner {i}",
+                company="",
+                description="QA тестування гіпотез",
+                first_seen="2026-08-20",
+            )
+        conn.commit()
+        conn.close()
+        return create_app(config={}, runner=None).test_client()
+
+    def test_uncut_feed_says_nothing_about_a_cap(self, client):
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-testid="feed-capped"' not in html
+
+    def test_cut_feed_is_flagged(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_LIMIT + 5)
+        html = client.get("/").get_data(as_text=True)
+        assert 'data-testid="feed-capped"' in html
+        assert f"cut at {views.FEED_LIMIT}" in html
+
+    def test_cut_feed_still_renders_exactly_the_limit(self, tmp_path):
+        client = self._fill(tmp_path, views.FEED_LIMIT + 5)
+        html = client.get("/").get_data(as_text=True)
+        assert f"shown <b>{views.FEED_LIMIT}</b>" in html
 
 
 class TestRunsScoringFailures:

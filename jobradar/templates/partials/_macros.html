@@ -147,7 +147,7 @@
   <div class="tabs">
     {% for tab in t.tabs %}<a class="tab{% if tab.on %} on{% endif %}" href="{{ tab.href }}">{{ tab.label }} <span class="n">{{ tab.count }}</span></a>{% endfor %}
   </div>
-  {% if t.shown is not none %}<span class="counts"><b>{{ t.total }}</b> in the database · shown <b>{{ t.shown }}</b></span>{% endif %}
+  {% if t.shown is not none %}<span class="counts"{% if t.capped %} data-testid="feed-capped" title="The feed renders at most {{ t.cap }} cards. The rest are in the database — narrow it with filters or search to reach them."{% endif %}><b>{{ t.total }}</b> in the database · shown <b>{{ t.shown }}</b>{% if t.capped %} <span class="cap">(cut at {{ t.cap }})</span>{% endif %}</span>{% endif %}
 </div>
 {% endmacro %}
 

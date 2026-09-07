@@ -337,3 +337,9 @@ form.filters {
 .tabrow .counts b {
   color: var(--petrol);
 }
+/* The list is cut at FEED_LIMIT — quiet, but never invisible. */
+.tabrow .counts .cap {
+  color: var(--dim);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
