@@ -184,12 +184,16 @@ def _feeds(raw_feeds):
 
 def _funnel(run):
     total = run["dup_skipped"] + run["l0_dropped"] + run["added"]
+    keys = run.keys()
     return {
         "fetched": run["fetched"],
         "dup_skipped": run["dup_skipped"],
         "l0_dropped": run["l0_dropped"],
         "added": run["added"],
         "revived": run["revived"],
+        # A run whose scorer broke sent nothing — the same shape as a quiet
+        # market unless the number is on the page (CLAUDE.md §4).
+        "scoring_failed": run["scoring_failed"] if "scoring_failed" in keys else 0,
         "triple": f"{run['dup_skipped']} + {run['l0_dropped']} + {run['added']}",
         "converges": total == run["fetched"],
     }

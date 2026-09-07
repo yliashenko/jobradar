@@ -255,6 +255,15 @@ class _FakeScorer:
         }
 
 
+class _BrokenScorer:
+    """Скорер увімкнений, але API падає — так само, як LlmScorer при HTTP 400."""
+
+    def score(self, job):
+        from jobradar.core.scoring import empty_row
+
+        return empty_row(error="HTTP 400: invalid model")
+
+
 class TestPipelineRun:
     def _cfg(self, path):
         return {
@@ -390,3 +399,127 @@ class TestPipelineRun:
 
         row = db_connect().execute("SELECT score, band FROM jobs").fetchone()
         assert row["score"] == 8.5 and row["band"] == "strong"
+
+
+class TestBrokenScorer:
+    """Скорер увімкнений і зламаний — головний ризик: невідсортовані вакансії
+    йшли б у Телеграм як матчі (CLAUDE.md §4)."""
+
+    def _cfg(self, path):
+        return {
+            "sources": {"fixture": {"enabled": True, "path": path}},
+            "l0": L0,
+        }
+
+    def _fixture(self, tmp_path):
+        return _write_fixture(
+            tmp_path,
+            [
+                {
+                    "source": "djinni",
+                    "url": "u1",
+                    "title": "Media Planner",
+                    "company": "",
+                    "location": "",
+                    "salary": "",
+                    "description": "QA тестування гіпотез",
+                }
+            ],
+        )
+
+    def test_failed_score_is_not_notified(self, tmp_path):
+        paths.use_home(tmp_path)
+        from jobradar import candidate
+
+        candidate.save(
+            {
+                "role": "qa_automation",
+                "telegram_bot_token": "t",
+                "telegram_chat_id": "c",
+            }
+        )
+        sent = []
+        pipeline.run(
+            self._cfg(self._fixture(tmp_path)),
+            _Args(),
+            scorer=_BrokenScorer(),
+            notify=lambda *a: sent.append(a[2]) or True,
+        )
+        from jobradar.core.db import db_connect
+
+        # Вакансія збережена без бала, але в чат пішов ЛИШЕ алерт, не вона.
+        row = (
+            db_connect()
+            .execute(
+                "SELECT score, notified_at FROM jobs WHERE title = 'Media Planner'"
+            )
+            .fetchone()
+        )
+        assert row["score"] is None
+        assert row["notified_at"] is None
+        assert not any("Media Planner" in text for text in sent)
+
+    def test_broken_scorer_alerts_once_per_run(self, tmp_path):
+        paths.use_home(tmp_path)
+        from jobradar import candidate
+
+        candidate.save(
+            {
+                "role": "qa_automation",
+                "telegram_bot_token": "t",
+                "telegram_chat_id": "c",
+            }
+        )
+        sent = []
+        pipeline.run(
+            self._cfg(self._fixture(tmp_path)),
+            _Args(),
+            scorer=_BrokenScorer(),
+            notify=lambda *a: sent.append(a[2]) or True,
+        )
+        alerts = [t for t in sent if "scorer is broken" in t]
+        assert len(alerts) == 1
+        assert "invalid model" in alerts[0]
+
+    def test_run_journal_counts_scoring_failures(self, tmp_path):
+        paths.use_home(tmp_path)
+        pipeline.run(
+            self._cfg(self._fixture(tmp_path)),
+            _Args(),
+            scorer=_BrokenScorer(),
+            notify=lambda *a: True,
+        )
+        from jobradar.core.db import db_connect
+
+        run = (
+            db_connect()
+            .execute(
+                "SELECT scoring_failed, notified FROM runs ORDER BY id DESC LIMIT 1"
+            )
+            .fetchone()
+        )
+        assert run["scoring_failed"] == 1
+        assert run["notified"] == 0
+
+    def test_disabled_scorer_still_notifies_everything_past_l0(self, tmp_path):
+        # Свідома поведінка (Phase 0 у PRODUCT.md): скорер ВИМКНЕНО — жодної
+        # помилки немає, тож усе, що пройшло L0, лишається кандидатом.
+        paths.use_home(tmp_path)
+        from jobradar import candidate
+        from jobradar.core.scoring import NullScorer
+
+        candidate.save(
+            {
+                "role": "qa_automation",
+                "telegram_bot_token": "t",
+                "telegram_chat_id": "c",
+            }
+        )
+        sent = []
+        pipeline.run(
+            self._cfg(self._fixture(tmp_path)),
+            _Args(),
+            scorer=NullScorer(),
+            notify=lambda *a: sent.append(a[2]) or True,
+        )
+        assert any("Media Planner" in text for text in sent)

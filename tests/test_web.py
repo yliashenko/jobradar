@@ -619,3 +619,29 @@ class TestFeedSort:
     def test_sort_score_ascending(self, client):
         html = client.get("/?status=all&sort=score_asc").get_data(as_text=True)
         assert html.index("Middle QA") < html.index("Senior QA Automation Engineer")
+
+
+class TestRunsScoringFailures:
+    """Виправлення «не слати незбалені» саме по собі мовчазне: чат порожній,
+    і мертвий ключ виглядає як тихий ринок. /runs має показати число."""
+
+    def _run(self, tmp_path, scoring_failed):
+        _seed(str(tmp_path))
+        conn = dbmod.db_connect()
+        conn.execute(
+            "INSERT INTO runs(started_at, finished_at, triggered_by, fetched, added,"
+            " notified, scoring_failed) VALUES(?,?,'cron',?,?,?,?)",
+            ("2026-08-20T09:00", "2026-08-20T09:05", 10, 4, 0, scoring_failed),
+        )
+        conn.commit()
+        conn.close()
+        return create_app(config={}, runner=None).test_client()
+
+    def test_failures_are_flagged(self, tmp_path):
+        html = self._run(tmp_path, 4).get("/runs").get_data(as_text=True)
+        assert 'data-testid="scoring-failed"' in html
+        assert "The scorer failed on 4" in html
+
+    def test_clean_run_shows_no_marker(self, tmp_path):
+        html = self._run(tmp_path, 0).get("/runs").get_data(as_text=True)
+        assert 'data-testid="scoring-failed"' not in html
